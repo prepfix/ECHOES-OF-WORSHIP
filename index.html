@@ -104,6 +104,8 @@ body.viewing main{padding-bottom:calc(var(--pl-h,200px) + 16px)}
     <p class="note">The song number is assigned automatically. Once saved, only the admin can change or remove it.</p>
     <label>Title</label><input id="ti" maxlength="150">
     <label>YouTube links</label><div id="lks"></div><button type="button" class="g" id="addlk" style="margin-top:2px">+ Add another link</button>
+    <label>Audio file link (optional, for background play)</label><input id="au_in" type="url" placeholder="https://.../song.mp3">
+    <p class="note">Direct link to an .mp3 or .m4a file. YouTube links cannot play in the background; an audio file can.</p>
     <label>Lyrics</label><textarea id="ly" rows="14" maxlength="15000"></textarea>
     <div class="bar"><button id="save">Save</button><button class="g" id="cancel">Cancel</button></div>
   </div>
@@ -147,8 +149,9 @@ Second line here</div>
     <div class="bar"><button class="g pvb">◀ Prev</button><button class="nxb">Next ▶</button></div>
     <button id="xf" class="hide">✕ Exit full screen</button>
     <div id="pl" class="player hide">
+      <audio id="au" class="hide" controls preload="none" playsinline style="flex:1;min-width:0;width:100%"></audio>
       <div class="box" id="pb"></div>
-      <div class="row"><button class="g" id="sz">Enlarge</button><button class="g" id="fs">Full screen</button><span id="lkb" style="display:contents"></span><button class="g pvb">◀ Prev</button><button class="nxb">Next ▶</button></div>
+      <div class="row"><button class="g hide" id="cast">📡 Cast</button><button class="g hide" id="mode"></button><button class="g" id="sz">Enlarge</button><button class="g" id="fs">Full screen</button><span id="lkb" style="display:contents"></span><button class="g pvb">◀ Prev</button><button class="nxb">Next ▶</button></div>
     </div>
   </div>
 </main>
@@ -261,7 +264,7 @@ function cleanLyrics(t){
     .replace(/^\n+|\n+$/g,'');                               /* no blank lines at start or end */
 }
 function ytId(u){const m=u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);return m?m[1]:null}
-function panel(p){document.body.classList.toggle('viewing',p==='view');document.body.classList.toggle('nosearch',p==='bulk');['list','form','view','bulk'].forEach(x=>$(x).classList.toggle('hide',x!==p));$('pl').classList.toggle('hide',p!=='view'||!cur||!getLinks(cur).length);window.scrollTo(0,0);if(window.__fit)window.__fit()}
+function panel(p){document.body.classList.toggle('viewing',p==='view');document.body.classList.toggle('nosearch',p==='bulk');['list','form','view','bulk'].forEach(x=>$(x).classList.toggle('hide',x!==p));$('pl').classList.toggle('hide',p!=='view'||!cur||!(getLinks(cur).length||audioUrl(cur)));window.scrollTo(0,0);if(window.__fit)window.__fit()}
 function render(){
   const q=$('q').value.trim().toLowerCase();
   let mode='num';try{mode=localStorage.getItem('sortmode')==='az'?'az':'num'}catch(e){}
@@ -274,10 +277,10 @@ function render(){
     const d=document.createElement('div');d.className='song';
     const n=document.createElement('div');n.className='num';n.textContent='#'+s.number;
     const w=document.createElement('div'),t=document.createElement('div'),m=document.createElement('div');
-    t.className='t';t.textContent=s.title;m.className='s';const nl=getLinks(s).length;m.textContent=nl?(nl>1?'▶ '+nl+' videos':'▶ video'):'no video';
+    t.className='t';t.textContent=s.title;m.className='s';const nl=getLinks(s).length,ha=!!audioUrl(s);m.textContent=(ha?'🎧 audio':'')+(ha&&nl?' · ':'')+(nl?(nl>1?'▶ '+nl+' videos':'▶ video'):'')||'no video';
     w.append(t,m);
     const pb=document.createElement('button');pb.className='pbtn';pb.textContent='▶';
-    if(nl){pb.title='Play this song';pb.setAttribute('aria-label','Play '+s.title);pb.onclick=e=>{e.stopPropagation();show(s,true)}}
+    if(nl||ha){pb.title='Play this song';pb.setAttribute('aria-label','Play '+s.title);pb.onclick=e=>{e.stopPropagation();show(s,true)}}
     else{pb.disabled=true;pb.title='No video link for this song';pb.setAttribute('aria-label','No video for '+s.title)}
     d.append(n,w,pb);
     let tm=null,lp=false,sx=0,sy=0;
@@ -317,14 +320,53 @@ function render(){
   if(!arr.length){const p=document.createElement('p');p.className='note';p.textContent=songs.length?'No songs match your search.':'No songs yet. Tap + Add to add the first one.';box.append(p);return}
   arr.forEach(s=>box.append(mk(s)));
 }
-function home(){try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}setFull(false);cur=null;$('pb').textContent='';panel('list');render()}
+function home(){try{$('au').pause()}catch(e){}try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}setFull(false);cur=null;$('pb').textContent='';panel('list');render()}
 function paintLinks(){
   const L=getLinks(cur),box=$('lkb');box.textContent='';
   if(L.length<2)return;
   L.forEach((u,i)=>{const b=document.createElement('button');b.textContent='Link '+(i+1);if(i!==linkIdx)b.className='g';b.onclick=()=>playLink(i,true);box.append(b)});
 }
+function audioUrl(sg){const u=String((sg&&sg.audio)||'').trim();return /^https?:\/\//i.test(u)?u:''}
+let vidMode=false;
+function paintMode(){
+  const a=audioUrl(cur),hasV=getLinks(cur).length>0,b=$('mode');
+  b.classList.toggle('hide',!(a&&hasV));b.textContent=vidMode?'🎧 Audio only':'▶ Show video';
+  $('au').classList.toggle('hide',!a||vidMode);
+  $('pb').classList.toggle('hide',!!a&&!vidMode);
+  const au=$('au'),canCast=!!(au.remote&&au.remote.prompt)||typeof au.webkitShowPlaybackTargetPicker==='function';
+  $('cast').classList.toggle('hide',!(a&&!vidMode&&canCast));
+}
+$('cast').onclick=()=>{
+  const au=$('au');
+  try{
+    if(au.remote&&au.remote.prompt){au.remote.prompt().catch(e=>{if(e&&e.name==='NotSupportedError')alert('No cast device found. Make sure your phone and the speaker/TV are on the same Wi-Fi.');else if(e&&e.name==='NotFoundError')alert('No cast device found on this Wi-Fi network.')})}
+    else if(au.webkitShowPlaybackTargetPicker)au.webkitShowPlaybackTargetPicker();
+  }catch(e){alert('Casting is not available in this browser.')}
+};
+function setupAudio(auto){
+  const au=$('au'),u=audioUrl(cur);
+  au.pause();
+  if(!u){au.removeAttribute('src');au.load();return}
+  au.src=u;
+  if('mediaSession' in navigator){
+    try{
+      navigator.mediaSession.metadata=new MediaMetadata({title:'#'+cur.number+' '+cur.title,artist:'Echoes of Worship'});
+      navigator.mediaSession.setActionHandler('nexttrack',()=>step(1));
+      navigator.mediaSession.setActionHandler('previoustrack',()=>step(-1));
+      navigator.mediaSession.setActionHandler('play',()=>au.play());
+      navigator.mediaSession.setActionHandler('pause',()=>au.pause());
+    }catch(e){}
+  }
+  if(auto)au.play().catch(()=>{});
+}
+$('au').addEventListener('ended',()=>{ /* keep going in the background: start the next song that has audio */
+  const L=navList(),i=L.findIndex(x=>x.id===cur.id);
+  for(let j=i+1;j<L.length;j++){if(audioUrl(L[j])){show(L[j],true);return}}
+});
+$('mode').onclick=()=>{vidMode=!vidMode;if(vidMode){$('au').pause();playLink(linkIdx,true)}else{$('pb').textContent='';setupAudio(true)}paintMode();if(window.__fit)window.__fit()};
 function playLink(i,auto){
   const L=getLinks(cur);linkIdx=i;$('pb').textContent='';
+  if(audioUrl(cur)&&!vidMode){paintLinks();return}
   if(L[i]){
     const f=document.createElement('iframe');
     f.src='https://www.youtube-nocookie.com/embed/'+ytId(L[i])+'?playsinline=1&rel=0&modestbranding=1&fs=0&iv_load_policy=3'+(auto?'&autoplay=1':'');
@@ -349,8 +391,8 @@ function step(d){
 function show(s,auto){
   cur=s;$('vt').textContent='#'+s.number+'  '+s.title;
   $('vl').textContent=cleanLyrics(s.lyrics)||'(no lyrics yet)';$('vl').style.fontSize=fs+'px';
-  setFull(false);playLink(0,auto);
-  panel('view');paintNav();
+  setFull(false);vidMode=false;playLink(0,auto);
+  panel('view');paintNav();setupAudio(auto);paintMode();
   try{history.replaceState(null,'',location.pathname+location.search+'#song-'+s.number)}catch(e){}
 }
 function addLinkRow(v){
@@ -363,14 +405,15 @@ function addLinkRow(v){
 function formLinks(){return[...new Set([...$('lks').querySelectorAll('input')].flatMap(i=>splitLinks(i.value)))]}
 function openForm(s){
   editing=s||null;document.querySelector('#form h2').textContent=s?'Edit song #'+s.number:'Add song';
-  $('ti').value=s?s.title:'';$('ly').value=s?cleanLyrics(s.lyrics):'';
+  $('ti').value=s?s.title:'';$('au_in').value=s&&s.audio?s.audio:'';$('ly').value=s?cleanLyrics(s.lyrics):'';
   $('lks').textContent='';rawLinks(s).forEach(addLinkRow);if(!$('lks').children.length)addLinkRow('');
   panel('form');
 }
 async function save(){
   if(!fdb){alert('Firebase is not set up yet');return}
-  const title=$('ti').value.trim(),lyrics=cleanLyrics($('ly').value),links=formLinks(),youtube=links[0]||'';
+  const title=$('ti').value.trim(),lyrics=cleanLyrics($('ly').value),links=formLinks(),youtube=links[0]||'',audio=$('au_in').value.trim();
   if(!title){alert('Please enter a title');return}
+  if(audio&&!/^https?:\/\//i.test(audio)){alert('The audio link must start with http:// or https://');return}
   const bad=links.find(l=>!ytId(l));
   if(bad){alert('This link is not recognised:\n'+bad);return}
   const dup=findSimilar(lyrics,editing&&editing.id);
@@ -381,17 +424,17 @@ async function save(){
   }
   try{
     if(editing){
-      await fdb.collection('songs').doc(editing.id).update({title,lyrics,youtube,links});
-      cur={...editing,title,lyrics,youtube,links};show(cur);
+      await fdb.collection('songs').doc(editing.id).update({title,lyrics,youtube,links,audio});
+      cur={...editing,title,lyrics,youtube,links,audio};show(cur);
     }else{
       const cref=fdb.doc('meta/counter');let num;
       const sref=fdb.collection('songs').doc();
       await fdb.runTransaction(async tx=>{
         const c=await tx.get(cref);num=(c.exists?c.data().n:0)+1;
         tx.set(cref,{n:num});
-        tx.set(sref,{number:num,title,lyrics,youtube,links,added:Date.now()});
+        tx.set(sref,{number:num,title,lyrics,youtube,links,audio,added:Date.now()});
       });
-      cur={id:sref.id,number:num,title,lyrics,youtube,links};show(cur);
+      cur={id:sref.id,number:num,title,lyrics,youtube,links,audio};show(cur);
     }
   }catch(e){alert('Could not save: '+e.message)}
 }
