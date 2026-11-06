@@ -26,6 +26,12 @@ button.d{background:transparent;color:var(--dg);border:1px solid var(--bd)}
 button.l{background:none;border:0;color:var(--mu);font-weight:400;font-size:13px;padding:2px 6px}
 main{padding:12px;max-width:760px;margin:0 auto}
 .song{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer}
+.song{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#wa{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:12px calc(12px + env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px))}
+#wa .sh{width:100%;max-width:420px;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:16px;padding:16px}
+#wa .sh .tt{font-weight:700;margin-bottom:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#wa .sh button{width:100%;margin-top:8px;padding:12px}
+#wa .sh .go{background:#25D366;color:#073b1b}
 .pbtn{margin-left:auto;flex:none;width:40px;height:40px;padding:0;border-radius:50%;font-size:16px;line-height:1}
 .num{min-width:48px;text-align:center;font-weight:700;color:var(--ac)}
 .t{font-weight:600}.s{color:var(--mu);font-size:13px}
@@ -273,7 +279,13 @@ function render(){
     const pb=document.createElement('button');pb.className='pbtn';pb.textContent='▶';
     if(nl){pb.title='Play this song';pb.setAttribute('aria-label','Play '+s.title);pb.onclick=e=>{e.stopPropagation();show(s,true)}}
     else{pb.disabled=true;pb.title='No video link for this song';pb.setAttribute('aria-label','No video for '+s.title)}
-    d.append(n,w,pb);d.onclick=()=>show(s);return d;
+    d.append(n,w,pb);
+    let tm=null,lp=false,sx=0,sy=0;
+    d.addEventListener('touchstart',e=>{lp=false;const t=e.touches[0];sx=t.clientX;sy=t.clientY;clearTimeout(tm);tm=setTimeout(()=>{lp=true;if(navigator.vibrate)try{navigator.vibrate(30)}catch(_){}waSheet(s)},550)},{passive:true});
+    d.addEventListener('touchmove',e=>{const t=e.touches[0];if(Math.abs(t.clientX-sx)>10||Math.abs(t.clientY-sy)>10)clearTimeout(tm)},{passive:true});
+    ['touchend','touchcancel'].forEach(ev=>d.addEventListener(ev,()=>clearTimeout(tm)));
+    d.addEventListener('contextmenu',e=>{e.preventDefault();clearTimeout(tm);lp=true;setTimeout(()=>{lp=false},1500);waSheet(s)}); /* long-press on phone, right-click on PC */
+    d.onclick=()=>{if(lp){lp=false;return}show(s)};return d;
   };
   if(songs.length&&!q){
     const idx=document.createElement('div');idx.id='idx';
@@ -386,6 +398,26 @@ async function save(){
 async function del(){
   if(!cur||!confirm('Delete song '+cur.number+' - '+cur.title+'?'))return;
   try{await fdb.collection('songs').doc(cur.id).delete();home()}catch(e){alert('Could not delete: '+e.message)}
+}
+
+/* ===== Share on WhatsApp (long-press a song) ===== */
+function shareText(sg){
+  const body=cleanLyrics(sg.lyrics),lk=getLinks(sg);
+  return '#'+sg.number+' '+sg.title+(body?'\n\n'+body:'')+'\n\n'+(lk.length?lk.join('\n')+'\n\n':'')+'Echoes of Worship: '+songLink(sg);
+}
+function waSheet(sg){
+  if($('wa'))return;
+  const ov=document.createElement('div');ov.id='wa';const t0=Date.now();
+  const close=()=>{ov.remove();document.removeEventListener('keydown',esc)};
+  const esc=e=>{if(e.key==='Escape')close()};
+  document.addEventListener('keydown',esc);
+  ov.onclick=e=>{if(e.target===ov&&Date.now()-t0>400)close()};
+  const sh=document.createElement('div');sh.className='sh';
+  const tt=document.createElement('div');tt.className='tt';tt.textContent='#'+sg.number+'  '+sg.title;
+  const go=document.createElement('button');go.className='go';go.textContent='Share on WhatsApp';
+  go.onclick=()=>{window.open('https://wa.me/?text='+encodeURIComponent(shareText(sg)),'_blank','noopener');close()}; /* WhatsApp lets you pick who to send to */
+  const cn=document.createElement('button');cn.className='g';cn.textContent='Cancel';cn.onclick=close;
+  sh.append(tt,go,cn);ov.append(sh);document.body.append(ov);
 }
 
 /* ===== Share ===== */
