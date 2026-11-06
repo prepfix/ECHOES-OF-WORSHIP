@@ -127,6 +127,7 @@ Was blind, but now I see
 Another Song Title
 First line of lyrics here
 Second line here</div>
+      <p class="note"><b>Pasting from WhatsApp?</b> Just paste it as it is. The date, time and sender name are removed automatically, the link message is attached to the song that follows it, the first line of the lyrics message becomes the title (a trailing word "Lyrics" is dropped), and the rest is the lyrics.</p>
       <p class="note">A blank line inside a song starts a new stanza. Extra blank lines are removed. You can also upload a <b>.txt</b> file in this format, a <b>.csv</b> file with columns <b>title, lyrics, link</b> (several links can be separated by spaces or semicolons), or a <b>.json</b> list of songs.</p>
     </details>
     <label>Upload a file</label><input type="file" id="bf" accept=".txt,.csv,.json,text/plain,text/csv,application/json">
@@ -256,9 +257,23 @@ function findSimilar(lyrics,ignoreId,extra){
 
 /* Only the first letter of every word is a capital; the rest of the word is lowercase */
 function capWords(t){return String(t||'').toLowerCase().replace(/(^|[\s\-\/("\[\u201c\u2018])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase())}
+/* Removes Chorus/Stanza labels, verse numbers, repeat marks (x2) and "Artist: ..." / "By: ..." lines. Returns null when the whole line should go. */
+function dropMarks(l){
+  let x=l.replace(/\s+$/,'');
+  if(!x.trim())return '';
+  if(/^\s*[\(\[\*]*\s*(?:artists?|artistes?|singers?|vocals?|performers?|composers?|choir|group|album|by)\s*:|^\s*[\(\[\*]*\s*(?:sung by|performed by|written by|composed by|lyrics by|music by)\b/i.test(x))return null;
+  x=x.replace(/^\s*[\(\[]?\d+\s*[.):\-\u2013\]]\s*/,'');                                     /* "1." "2)" "3:" at the start */
+  if(!x.trim()||/^\s*[\(\[\*]*\s*\d+\s*[\)\]\*]*\s*$/.test(x))return null;                    /* a line that is only a number */
+  if(/^\s*[\(\[\*]*\s*(?:chorus|stanza|verse|refrain)\b\s*\d*\s*[:.\-\u2013]?\s*[\)\]\*]*\s*[:.\-\u2013]?\s*$/i.test(x))return null; /* a line that is only a label */
+  x=x.replace(/^\s*[\(\[\*]*\s*(?:chorus|stanza)\b\s*\d*\s*[:.\-\u2013]?\s*[\)\]\*]*\s*[:.\-\u2013]?\s*/i,''); /* label in front of real lyrics */
+  x=x.replace(/\s*[\(\[]?\s*(?:x\s*\d+|\d+\s*x|\d+\s*times)\s*[\)\]]?\s*$/i,'');              /* x2, 2x, (3 times) at the end */
+  if(/\b(?:chorus|stanza)\b/i.test(x))x=x.replace(/\s*\b(?:chorus|stanza)\b\s*\d*/gi,' ').replace(/ {2,}/g,' ');
+  x=x.replace(/\s+$/,'');
+  return x.trim()?x:null;
+}
 function cleanLyrics(t){
   return capWords(String(t||'').replace(/\r\n?/g,'\n').replace(/[\u00a0\u200b\ufeff]/g,' ')
-    .split('\n').map(l=>l.replace(/\s+$/,'')).join('\n')   /* strip trailing spaces; whitespace-only lines become empty */
+    .split('\n').map(dropMarks).filter(l=>l!==null).join('\n')   /* strip trailing spaces; whitespace-only lines become empty */
     .replace(/\n{3,}/g,'\n\n')                              /* many blank lines -> exactly one (stanza break) */
     .replace(/^\n+|\n+$/g,''));                              /* no blank lines at start or end */
 }
@@ -431,14 +446,48 @@ $('shr').onclick=async()=>{
 /* ===== Bulk add (admin) ===== */
 let bulkItems=[];
 function openBulk(){bulkItems=[];$('bt').value='';$('bf').value='';$('bprog').textContent='';bulkPreview();panel('bulk')}
+/* ===== WhatsApp paste: removes "[06/09, 10:51 pm] Name:" stamps, keeps links + title + lyrics ===== */
+const WA_STAMP=/^\[?\d{1,2}[\/.]\d{1,2}(?:[\/.]\d{2,4})?,?\s+\d{1,2}[:.]\d{2}(?::\d{2})?\s*(?:[apAP]\.?[mM]\.?)?\]?\s*(?:-\s*)?[^:\n]{1,80}:[ \t]?/;
+function stripLyricsWord(t){const r=t.replace(/\s*[\(\[\-\u2013:|]*\s*lyrics?\s*[\)\]]*\s*$/i,'').trim();return r||t}
+function waToBlocks(t){
+  t=t.replace(/[\u200e\u200f\u202a-\u202c]/g,'');
+  const lines=t.split('\n');
+  if(!lines.some(l=>WA_STAMP.test(l)))return t;      /* not a WhatsApp paste: leave it alone */
+  const msgs=[];
+  lines.forEach(l=>{
+    const m=l.match(WA_STAMP);
+    if(m)msgs.push([l.slice(m[0].length)]);
+    else if(msgs.length)msgs[msgs.length-1].push(l);
+    else msgs.push([l]);
+  });
+  const skipRe=/^<?\s*(?:media|image|video|audio|sticker|gif|document|file)s?\s+omitted\s*>?$|^(?:this message was deleted|you deleted this message)\.?$/i;
+  const urlRe=/^(?:(?:link|youtube|video|url)\s*\d*\s*[:=]\s*)?(https?:\/\/\S+)$/i;
+  const out=[];let links=[];
+  msgs.forEach(ml=>{
+    const text=[];
+    ml.forEach(l=>{
+      const x=l.trim();
+      if(skipRe.test(x))return;
+      const u=x.match(urlRe);
+      if(u)links.push(u[1]);else text.push(l);
+    });
+    while(text.length&&!text[0].trim())text.shift();
+    if(!text.length)return;                          /* link-only message: its link goes to the next song */
+    const title=text.shift().trim();
+    out.push([title,...links.map(u=>'Link: '+u),...text].join('\n'));
+    links=[];
+  });
+  return out.join('\n===\n');
+}
 function parseBulkText(t){
   t=String(t||'').replace(/\r\n?/g,'\n');
+  t=waToBlocks(t);
   const out=[];
   t.split(/^[ \t]*={3,}[ \t]*$/m).forEach(block=>{
     const lines=block.split('\n');
     while(lines.length&&!lines[0].trim())lines.shift();
     if(!lines.length)return;
-    const title=capWords(lines.shift().trim().replace(/^title\s*[:\-]\s*/i,''));
+    const title=capWords(stripLyricsWord(lines.shift().trim().replace(/^title\s*[:\-]\s*/i,'')));
     const links=[];
     for(;;){
       while(lines.length&&!lines[0].trim())lines.shift();
