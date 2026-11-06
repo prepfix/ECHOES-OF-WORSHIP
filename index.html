@@ -26,6 +26,7 @@ button.d{background:transparent;color:var(--dg);border:1px solid var(--bd)}
 button.l{background:none;border:0;color:var(--mu);font-weight:400;font-size:13px;padding:2px 6px}
 main{padding:12px;max-width:760px;margin:0 auto}
 .song{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer}
+.pbtn{margin-left:auto;flex:none;width:40px;height:40px;padding:0;border-radius:50%;font-size:16px;line-height:1}
 .num{min-width:48px;text-align:center;font-weight:700;color:var(--ac)}
 .t{font-weight:600}.s{color:var(--mu);font-size:13px}
 .lyrics{white-space:pre-wrap;line-height:1.7;padding-bottom:260px}
@@ -268,7 +269,11 @@ function render(){
     const n=document.createElement('div');n.className='num';n.textContent='#'+s.number;
     const w=document.createElement('div'),t=document.createElement('div'),m=document.createElement('div');
     t.className='t';t.textContent=s.title;m.className='s';const nl=getLinks(s).length;m.textContent=nl?(nl>1?'▶ '+nl+' videos':'▶ video'):'no video';
-    w.append(t,m);d.append(n,w);d.onclick=()=>show(s);return d;
+    w.append(t,m);
+    const pb=document.createElement('button');pb.className='pbtn';pb.textContent='▶';
+    if(nl){pb.title='Play this song';pb.setAttribute('aria-label','Play '+s.title);pb.onclick=e=>{e.stopPropagation();show(s,true)}}
+    else{pb.disabled=true;pb.title='No video link for this song';pb.setAttribute('aria-label','No video for '+s.title)}
+    d.append(n,w,pb);d.onclick=()=>show(s);return d;
   };
   if(songs.length&&!q){
     const idx=document.createElement('div');idx.id='idx';
