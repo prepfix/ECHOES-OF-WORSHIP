@@ -29,25 +29,28 @@ main{padding:12px;max-width:760px;margin:0 auto}
 .num{min-width:48px;text-align:center;font-weight:700;color:var(--ac)}
 .t{font-weight:600}.s{color:var(--mu);font-size:13px}
 .lyrics{white-space:pre-wrap;line-height:1.7;padding-bottom:260px}
-.player{position:fixed;left:0;right:0;bottom:var(--foot-h,48px);background:var(--card);border-top:1px solid var(--bd);padding:8px 12px;z-index:6;display:flex;gap:10px;align-items:center}
+.player{position:fixed;left:0;right:0;bottom:calc(var(--foot-h,40px) - 1px);background:var(--card);border-top:1px solid var(--bd);padding:8px 12px;z-index:6;display:flex;gap:10px;align-items:center}
 .player .box{width:200px;aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden;flex:none}
 .player.big{flex-direction:column;align-items:stretch}
 .player.big .box{width:100%}
 .player .row{flex-wrap:wrap}
+#view .bar{margin:6px 0;gap:6px}
+#view .bar button{padding:6px 8px;font-size:13px}
+.player .row button{padding:4px 10px;font-size:12px;border-radius:8px}
 iframe{width:100%;height:100%;border:0}
 .hide{display:none!important}
 .player .box.full{position:fixed;inset:0;width:100%;height:100%;aspect-ratio:auto;border-radius:0;z-index:60}
 #xf{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:10px;z-index:70;background:rgba(0,0,0,.7);color:#fff;border:1px solid rgba(255,255,255,.4)}
-.brand{position:fixed;top:0;left:0;right:0;z-index:5;background:var(--bg);text-align:center;padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px;border-bottom:1px solid var(--bd)}
-.brand img{height:48px;display:inline-block;vertical-align:middle;max-width:90%;object-fit:contain;background:#fff;border-radius:14px;padding:4px 10px;animation:logoGlow 2.8s ease-in-out infinite}
+.brand{position:fixed;top:0;left:0;right:0;z-index:5;background:var(--bg);text-align:center;padding:calc(4px + env(safe-area-inset-top,0px)) 12px 4px;border-bottom:1px solid var(--bd)}
+.brand img{height:34px;display:inline-block;vertical-align:middle;max-width:90%;object-fit:contain;background:#fff;border-radius:14px;padding:4px 10px;animation:logoGlow 2.8s ease-in-out infinite}
 @keyframes logoGlow{0%,100%{box-shadow:0 0 6px 1px rgba(0,153,255,.45),0 0 16px 3px rgba(0,153,255,.25)}50%{box-shadow:0 0 14px 4px rgba(0,153,255,.85),0 0 32px 10px rgba(255,160,30,.45)}}
-footer{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--bd);text-align:center;color:#8fd0ff;font-size:13px;letter-spacing:.12em;font-weight:700;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));text-shadow:0 0 6px #1e90ff,0 0 14px #1e90ff,0 0 26px #0a6cff;animation:footGlow 2.8s ease-in-out infinite}
+footer{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--bd);text-align:center;color:#8fd0ff;font-size:11px;letter-spacing:.1em;font-weight:700;padding:5px 12px calc(5px + env(safe-area-inset-bottom,0px));text-shadow:0 0 6px #1e90ff,0 0 14px #1e90ff,0 0 26px #0a6cff;animation:footGlow 2.8s ease-in-out infinite}
 @keyframes footGlow{0%,100%{text-shadow:0 0 4px #1e90ff,0 0 10px #1e90ff}50%{text-shadow:0 0 8px #4db3ff,0 0 20px #1e90ff,0 0 36px #0a6cff}}
 @media (prefers-color-scheme:light){:root:not([data-theme=dark]) footer{color:#0a5fd0}}
 :root[data-theme=light] footer{color:#0a5fd0}
 #thm{padding:2px 8px;font-size:16px}
 @media (prefers-reduced-motion:reduce){.brand img,footer{animation:none}}
-body.viewing main{padding-bottom:240px}
+body.viewing main{padding-bottom:calc(var(--pl-h,200px) + 16px)}
 .lyrics{padding-bottom:20px!important}
 #idx{position:sticky;top:calc(var(--brand-h,80px) + var(--hdr-h,100px));z-index:4;background:var(--bg);margin:0 -12px 6px;padding:6px 12px;border-bottom:1px solid var(--bd)}
 #idx .tog{display:flex;gap:6px;align-items:center;margin-bottom:6px;font-size:13px;color:var(--mu)}
@@ -56,14 +59,25 @@ body.viewing main{padding-bottom:240px}
 #idx .chips::-webkit-scrollbar{display:none}
 #idx .chips button{flex:none;padding:5px 11px;font-size:13px;border-radius:999px;background:var(--card);color:var(--ac);border:1px solid var(--bd)}
 .sec{margin:14px 0 6px;font-size:14px;font-weight:700;color:var(--ac);letter-spacing:.04em;scroll-margin-top:calc(var(--brand-h,80px) + var(--hdr-h,100px) + 84px)}
+body.viewing header .row,body.nosearch header .row{display:none}
+body.viewing header h1,body.nosearch header h1{margin-bottom:0}
+.ex{white-space:pre-wrap;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5;margin:8px 0}
+details summary{cursor:pointer;color:var(--ac);font-weight:600;margin:6px 0}
+.bpv{margin:12px 0}
+.bpv .it{display:flex;gap:8px;align-items:baseline;padding:7px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--card);margin-bottom:6px;font-size:14px}
+.bpv .it .n{color:var(--mu);min-width:26px;text-align:right;flex:none}
+.bpv .it .m{color:var(--mu);font-size:12px;margin-left:auto;text-align:right;flex:none}
+.bpv .it.skip{opacity:.55}.bpv .it.warn .m{color:var(--dg)}
+.bpv .sum{font-weight:600;margin-bottom:8px}
+button:disabled{opacity:.45;cursor:not-allowed}
 label{display:block;font-weight:600;margin:12px 0 4px}
 .note{color:var(--mu);font-size:13px;margin:6px 0}
 .bar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 @media (orientation:portrait){
 .player{flex-direction:column;align-items:stretch;gap:6px;padding:0 0 8px}
-.player .box{width:100%;border-radius:0}
+.player .box{width:68%;margin:0 auto;border-radius:8px}
 .player .row{padding:0 12px}
-body.viewing main{padding-bottom:calc(56.25vw + 90px)}
+body.viewing main{padding-bottom:calc(var(--pl-h,200px) + 16px)}
 }
 </style></head>
 <body>
@@ -85,10 +99,39 @@ body.viewing main{padding-bottom:calc(56.25vw + 90px)}
     <div class="bar"><button id="save">Save</button><button class="g" id="cancel">Cancel</button></div>
   </div>
 
+  <div id="bulk" class="hide">
+    <h2>Bulk add songs</h2>
+    <p class="note">Add many songs at once. Song numbers are assigned automatically, in the order they appear.</p>
+    <details><summary>How to format the songs</summary>
+      <div class="ex">Put each song one after another. Separate songs with a line of ===
+The first line is the title. A video link is optional.
+
+Amazing Grace
+Link: https://youtu.be/XXXXXXXXXXX
+Amazing grace, how sweet the sound
+That saved a wretch like me
+
+I once was lost, but now am found
+Was blind, but now I see
+===
+Another Song Title
+First line of lyrics here
+Second line here</div>
+      <p class="note">A blank line inside a song starts a new stanza. Extra blank lines are removed. You can also upload a <b>.txt</b> file in this format, a <b>.csv</b> file with columns <b>title, lyrics, link</b>, or a <b>.json</b> list of songs.</p>
+    </details>
+    <label>Upload a file</label><input type="file" id="bf" accept=".txt,.csv,.json,text/plain,text/csv,application/json">
+    <label>Or paste your songs here</label>
+    <textarea id="bt" rows="12" maxlength="400000" placeholder="Song title&#10;Link: https://youtu.be/...&#10;Lyrics...&#10;===&#10;Next song title&#10;Lyrics..."></textarea>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:10px"><input type="checkbox" id="bskip" checked style="width:auto"> Skip songs whose title is already in the app</label>
+    <div id="bpv" class="bpv"></div>
+    <div class="bar"><button id="bgo" disabled>Import</button><button class="g" id="bcancel">Cancel</button></div>
+    <p id="bprog" class="note"></p>
+  </div>
+
   <div id="view" class="hide">
     <div class="bar"><button class="g" id="back">← Back</button>
       <button class="g admin hide" id="edit">Edit</button><button class="d admin hide" id="del">Delete</button>
-      <button class="g" id="fm">A−</button><button class="g" id="fp">A+</button></div>
+      <button class="g" id="fm">A−</button><button class="g" id="fp">A+</button><button class="g" id="shr">Share</button></div>
     <h2 id="vt"></h2>
     <div id="vl" class="lyrics"></div>
     <button id="xf" class="hide">✕ Exit full screen</button>
@@ -119,7 +162,10 @@ body.viewing main{padding-bottom:calc(56.25vw + 90px)}
     if(b)r.setProperty('--brand-h',b.offsetHeight+'px');
     if(f)r.setProperty('--foot-h',f.offsetHeight+'px');
   }
+  function pl(){var p=document.getElementById('pl');document.documentElement.style.setProperty('--pl-h',(p&&p.offsetHeight?p.offsetHeight:0)+'px')}
+  var _f=fit;fit=function(){_f();pl()};
   fit();window.__fit=fit;
+  if(window.ResizeObserver){var po=document.getElementById('pl');if(po)new ResizeObserver(pl).observe(po)}
   addEventListener('resize',fit);addEventListener('orientationchange',fit);addEventListener('load',fit);
   var im=document.querySelector('.brand img');if(im)im.addEventListener('load',fit);
 })();
@@ -138,7 +184,7 @@ const firebaseConfig = {
 /* =============================================================== */
 
 const $=id=>document.getElementById(id);
-let songs=[],cur=null,editing=null,fs=18,isAdmin=false,fdb,auth;
+let hashDone=false,songs=[],cur=null,editing=null,fs=18,isAdmin=false,fdb,auth;
 
 if(firebaseConfig.apiKey==="PASTE_HERE"){$('cfgwarn').classList.remove('hide')}
 else{
@@ -147,17 +193,25 @@ else{
     songs=s.docs.map(d=>({id:d.id,...d.data()}));
     if(cur){cur=songs.find(x=>x.id===cur.id)||cur}
     render();
+    if(!hashDone&&songs.length)openFromHash();
   },e=>alert('Could not load songs: '+e.message));
-  auth.onAuthStateChanged(u=>{isAdmin=!!u;$('adm').textContent=u?'Sign out':'Admin';document.querySelectorAll('.admin').forEach(b=>b.classList.toggle('hide',!u))});
+  auth.onAuthStateChanged(u=>{isAdmin=!!u;$('adm').textContent=u?'Sign out':'Admin';document.querySelectorAll('.admin').forEach(b=>b.classList.toggle('hide',!u));render()});
 }
 
+function cleanLyrics(t){
+  return String(t||'').replace(/\r\n?/g,'\n').replace(/[\u00a0\u200b\ufeff]/g,' ')
+    .split('\n').map(l=>l.replace(/\s+$/,'')).join('\n')   /* strip trailing spaces; whitespace-only lines become empty */
+    .replace(/\n{3,}/g,'\n\n')                              /* many blank lines -> exactly one (stanza break) */
+    .replace(/^\n+|\n+$/g,'');                               /* no blank lines at start or end */
+}
 function ytId(u){const m=u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);return m?m[1]:null}
-function panel(p){document.body.classList.toggle('viewing',p==='view');['list','form','view'].forEach(x=>$(x).classList.toggle('hide',x!==p));$('pl').classList.toggle('hide',p!=='view'||!cur||!cur.youtube);window.scrollTo(0,0)}
+function panel(p){document.body.classList.toggle('viewing',p==='view');document.body.classList.toggle('nosearch',p==='bulk');['list','form','view','bulk'].forEach(x=>$(x).classList.toggle('hide',x!==p));$('pl').classList.toggle('hide',p!=='view'||!cur||!cur.youtube);window.scrollTo(0,0);if(window.__fit)window.__fit()}
 function render(){
   const q=$('q').value.trim().toLowerCase();
   let mode='num';try{mode=localStorage.getItem('sortmode')==='az'?'az':'num'}catch(e){}
   const arr=songs.filter(s=>!q||String(s.number)===q||(s.title||'').toLowerCase().includes(q)||(s.lyrics||'').toLowerCase().includes(q));
   const box=$('list');box.textContent='';
+  if(isAdmin){const bb=document.createElement('button');bb.className='g';bb.style.cssText='width:100%;margin-bottom:8px';bb.textContent='⬆ Bulk add songs';bb.onclick=openBulk;box.append(bb)}
   if(!q&&mode==='az')arr.sort((a,b)=>(a.title||'').localeCompare(b.title||'',undefined,{sensitivity:'base'}));
   const mk=(s)=>{
     const d=document.createElement('div');d.className='song';
@@ -196,10 +250,10 @@ function render(){
   if(!arr.length){const p=document.createElement('p');p.className='note';p.textContent=songs.length?'No songs match your search.':'No songs yet. Tap + Add to add the first one.';box.append(p);return}
   arr.forEach(s=>box.append(mk(s)));
 }
-function home(){setFull(false);cur=null;$('pb').textContent='';panel('list');render()}
+function home(){try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}setFull(false);cur=null;$('pb').textContent='';panel('list');render()}
 function show(s){
   cur=s;$('vt').textContent='#'+s.number+'  '+s.title;
-  $('vl').textContent=s.lyrics||'(no lyrics yet)';$('vl').style.fontSize=fs+'px';$('pb').textContent='';
+  $('vl').textContent=cleanLyrics(s.lyrics)||'(no lyrics yet)';$('vl').style.fontSize=fs+'px';$('pb').textContent='';
   if(s.youtube&&ytId(s.youtube)){
     const f=document.createElement('iframe');
     f.src='https://www.youtube-nocookie.com/embed/'+ytId(s.youtube)+'?playsinline=1&rel=0&modestbranding=1&fs=0&iv_load_policy=3';
@@ -208,14 +262,15 @@ function show(s){
     f.allow='autoplay; encrypted-media';f.allowFullscreen=false;$('pb').append(f);
   }
   panel('view');
+  try{history.replaceState(null,'',location.pathname+location.search+'#song-'+s.number)}catch(e){}
 }
 function openForm(s){
   editing=s||null;document.querySelector('#form h2').textContent=s?'Edit song #'+s.number:'Add song';
-  $('ti').value=s?s.title:'';$('yt').value=s?s.youtube||'':'';$('ly').value=s?s.lyrics||'':'';panel('form');
+  $('ti').value=s?s.title:'';$('yt').value=s?s.youtube||'':'';$('ly').value=s?cleanLyrics(s.lyrics):'';panel('form');
 }
 async function save(){
   if(!fdb){alert('Firebase is not set up yet');return}
-  const title=$('ti').value.trim(),lyrics=$('ly').value,youtube=$('yt').value.trim();
+  const title=$('ti').value.trim(),lyrics=cleanLyrics($('ly').value),youtube=$('yt').value.trim();
   if(!title){alert('Please enter a title');return}
   if(youtube&&!ytId(youtube)){alert('That YouTube link is not recognised');return}
   try{
@@ -238,6 +293,151 @@ async function del(){
   if(!cur||!confirm('Delete song '+cur.number+' - '+cur.title+'?'))return;
   try{await fdb.collection('songs').doc(cur.id).delete();home()}catch(e){alert('Could not delete: '+e.message)}
 }
+
+/* ===== Share ===== */
+function songLink(sg){return location.origin+location.pathname+'#song-'+sg.number}
+function openFromHash(){
+  const m=location.hash.match(/^#song-(\d+)$/);
+  if(!m){hashDone=true;return}
+  const sg=songs.find(x=>String(x.number)===m[1]);
+  if(sg){hashDone=true;show(sg)}
+}
+$('shr').onclick=async()=>{
+  if(!cur)return;
+  const body=cleanLyrics(cur.lyrics),link=songLink(cur);
+  const text='#'+cur.number+' '+cur.title+(body?'\n\n'+body:'')+'\n\n'+(cur.youtube?cur.youtube+'\n\n':'')+'Echoes of Worship: '+link;
+  const btn=$('shr'),old=btn.textContent;
+  try{
+    if(navigator.share){await navigator.share({title:'#'+cur.number+' '+cur.title,text});return}
+    if(navigator.clipboard){await navigator.clipboard.writeText(text);btn.textContent='Copied ✓';setTimeout(()=>btn.textContent=old,1800);return}
+    prompt('Copy this to share:',text);
+  }catch(e){ if(e&&e.name==='AbortError')return; try{prompt('Copy this to share:',text)}catch(_){} }
+};
+
+/* ===== Bulk add (admin) ===== */
+let bulkItems=[];
+function openBulk(){bulkItems=[];$('bt').value='';$('bf').value='';$('bprog').textContent='';bulkPreview();panel('bulk')}
+function parseBulkText(t){
+  t=String(t||'').replace(/\r\n?/g,'\n');
+  const out=[];
+  t.split(/^[ \t]*={3,}[ \t]*$/m).forEach(block=>{
+    const lines=block.split('\n');
+    while(lines.length&&!lines[0].trim())lines.shift();
+    if(!lines.length)return;
+    const title=lines.shift().trim().replace(/^title\s*[:\-]\s*/i,'');
+    let link='';
+    for(;;){
+      while(lines.length&&!lines[0].trim())lines.shift();
+      if(!lines.length)break;
+      const l=lines[0].trim();
+      let m=l.match(/^(?:link|youtube|video|url)\s*[:=]\s*(\S+)/i);
+      if(!m&&/^https?:\/\/\S+$/i.test(l))m=[l,l];
+      if(m){link=m[1];lines.shift();continue}
+      if(/^lyrics\s*:?\s*$/i.test(l)){lines.shift();continue}
+      break;
+    }
+    if(!title&&!lines.length)return;
+    out.push({title,link,lyrics:cleanLyrics(lines.join('\n'))});
+  });
+  return out;
+}
+function parseCSV(t){
+  t=String(t||'').replace(/^\ufeff/,'');
+  const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<t.length;i++){
+    const c=t[i];
+    if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true;
+    else if(c===','){row.push(f);f=''}
+    else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);f='';rows.push(row);row=[]}
+    else f+=c;
+  }
+  if(f!==''||row.length){row.push(f);rows.push(row)}
+  const clean=rows.filter(r=>r.some(x=>x.trim()));
+  if(!clean.length)return[];
+  let ti=0,li=1,ki=2,start=0;
+  const h=clean[0].map(x=>x.trim().toLowerCase());
+  const find=(...n)=>h.findIndex(x=>n.includes(x));
+  const t2=find('title','name','song','song title');
+  if(t2>=0){ti=t2;li=find('lyrics','words','text');ki=find('link','youtube','video','url','youtube link');start=1}
+  return clean.slice(start).map(r=>({title:(r[ti]||'').trim(),lyrics:cleanLyrics(li>=0?r[li]:''),link:(ki>=0?(r[ki]||''):'').trim()}));
+}
+function parseJSON(t){
+  let a;try{a=JSON.parse(t)}catch(e){throw new Error('That JSON file could not be read')}
+  if(!Array.isArray(a))a=a.songs||[];
+  return a.map(o=>({title:String(o.title||o.name||'').trim(),lyrics:cleanLyrics(o.lyrics||o.words||''),link:String(o.link||o.youtube||o.video||o.url||'').trim()}));
+}
+function bulkPreview(){
+  const box=$('bpv');box.textContent='';
+  const skip=$('bskip').checked,have=new Set(songs.map(x=>(x.title||'').trim().toLowerCase()));
+  let ok=0,sk=0,wn=0;
+  bulkItems.forEach(it=>{
+    it.status='ok';it.note='';
+    if(!it.title){it.status='bad';it.note='no title - skipped'}
+    else if(it.link&&!ytId(it.link)){it.status='warn';it.note='link not recognised - added without video'}
+    if(it.status!=='bad'&&skip&&have.has(it.title.toLowerCase())){it.status='skip';it.note='already exists - skipped'}
+    if(it.status==='ok'||it.status==='warn')ok++;else sk++;
+    if(it.status==='warn')wn++;
+  });
+  if(!bulkItems.length){const p=document.createElement('p');p.className='note';p.textContent='Nothing to import yet. Paste songs above or upload a file.';box.append(p);$('bgo').disabled=true;$('bgo').textContent='Import';return}
+  const sum=document.createElement('div');sum.className='sum';
+  sum.textContent=bulkItems.length+' found · '+ok+' will be added'+(sk?' · '+sk+' skipped':'')+(wn?' · '+wn+' warning'+(wn>1?'s':''):'');box.append(sum);
+  bulkItems.forEach((it,i)=>{
+    const d=document.createElement('div');d.className='it'+(it.status==='skip'||it.status==='bad'?' skip':'')+(it.status==='warn'||it.status==='bad'?' warn':'');
+    const n=document.createElement('span');n.className='n';n.textContent=(i+1)+'.';
+    const t=document.createElement('span');t.textContent=it.title||'(no title)';
+    const m=document.createElement('span');m.className='m';
+    const ln=it.lyrics?it.lyrics.split('\n').filter(x=>x.trim()).length:0;
+    m.textContent=it.note||((it.link?'▶ video · ':'no video · ')+ln+(ln===1?' line':' lines'));
+    d.append(n,t,m);box.append(d);
+  });
+  $('bgo').disabled=ok===0;$('bgo').textContent='Import '+ok+' song'+(ok===1?'':'s');
+}
+$('bt').oninput=()=>{bulkItems=parseBulkText($('bt').value);bulkPreview()};
+$('bskip').onchange=bulkPreview;
+$('bf').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    const txt=await f.text(),name=f.name.toLowerCase();
+    if(name.endsWith('.csv')){bulkItems=parseCSV(txt);$('bt').value=''}
+    else if(name.endsWith('.json')){bulkItems=parseJSON(txt);$('bt').value=''}
+    else{$('bt').value=txt;bulkItems=parseBulkText(txt)}
+    bulkPreview();
+  }catch(err){alert(err.message||'Could not read that file')}
+};
+async function addOne(it){
+  const cref=fdb.doc('meta/counter'),sref=fdb.collection('songs').doc();let num;
+  const title=it.title,lyrics=it.lyrics,youtube=(it.link&&ytId(it.link))?it.link:'';
+  await fdb.runTransaction(async tx=>{
+    const c=await tx.get(cref);num=(c.exists?c.data().n:0)+1;
+    tx.set(cref,{n:num});
+    tx.set(sref,{number:num,title,lyrics,youtube,added:Date.now()});
+  });
+  return num;
+}
+$('bgo').onclick=async()=>{
+  if(!fdb){alert('Firebase is not set up yet');return}
+  const todo=bulkItems.filter(i=>i.status==='ok'||i.status==='warn');
+  if(!todo.length||!confirm('Add '+todo.length+' song'+(todo.length===1?'':'s')+' now?'))return;
+  $('bgo').disabled=true;$('bcancel').disabled=true;$('bt').disabled=true;$('bf').disabled=true;
+  let done=0,first=0,last=0;
+  try{
+    for(const it of todo){
+      $('bprog').textContent='Adding '+(done+1)+' of '+todo.length+': '+it.title;
+      const n=await addOne(it);if(!first)first=n;last=n;done++;
+    }
+    $('bprog').textContent='';
+    alert('Done! '+done+' song'+(done===1?'':'s')+' added (#'+first+(last!==first?' to #'+last:'')+').');
+    home();
+  }catch(e){
+    $('bprog').textContent='';
+    alert('Stopped after '+done+' of '+todo.length+' songs.\n'+e.message+'\n\nThe songs already added are saved. Remove them from your list before trying again, or tick "Skip songs whose title is already in the app".');
+    bulkItems=bulkItems.filter(i=>!(todo.indexOf(i)>=0&&todo.indexOf(i)<done));bulkPreview();
+  }
+  $('bcancel').disabled=false;$('bt').disabled=false;$('bf').disabled=false;
+};
+$('bcancel').onclick=()=>home();
+
 $('adm').onclick=async()=>{
   if(!auth){alert('Firebase is not set up yet');return}
   if(isAdmin){auth.signOut();return}
