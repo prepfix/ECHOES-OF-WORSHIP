@@ -20,6 +20,9 @@ header{position:sticky;top:var(--brand-h,80px);z-index:5;background:var(--bg);pa
 h1{font-size:18px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
 .row{display:flex;gap:8px;align-items:center}
 input,textarea{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);font:inherit}
+textarea#ly{min-height:380px;font-size:17px;line-height:1.6}
+textarea#bt{min-height:300px}
+input#ti{padding:12px 14px;font-size:17px}
 button{border:0;border-radius:10px;padding:10px 14px;background:var(--ac);color:var(--ac2);font:inherit;font-weight:600;cursor:pointer}
 button.g{background:transparent;color:var(--ac);border:1px solid var(--bd)}
 button.d{background:transparent;color:var(--dg);border:1px solid var(--bd)}
@@ -98,10 +101,10 @@ body.viewing main{padding-bottom:calc(var(--pl-h,200px) + 16px)}
   <div id="form" class="hide">
     <h2>Add song</h2>
     <p class="note">The song number is assigned automatically. Once saved, only the admin can change or remove it.</p>
-    <label>Title</label><input id="ti" maxlength="150" placeholder="Leave empty to fill from a video link">
+    <label>Title</label><input id="ti" autocapitalize="words" maxlength="150" placeholder="Leave empty to fill from a video link">
     <label>YouTube links</label><div id="lks"></div><button type="button" class="g" id="addlk" style="margin-top:2px">+ Add another link</button>
     <label>Lyrics</label>
-    <textarea id="ly" rows="14" maxlength="15000"></textarea>
+    <textarea id="ly" rows="20" autocapitalize="words" maxlength="15000"></textarea>
     <div class="bar"><button id="save">Save</button><button class="g" id="cancel">Cancel</button></div>
   </div>
 
@@ -128,7 +131,7 @@ Second line here</div>
     </details>
     <label>Upload a file</label><input type="file" id="bf" accept=".txt,.csv,.json,text/plain,text/csv,application/json">
     <label>Or paste your songs here</label>
-    <textarea id="bt" rows="12" maxlength="400000" placeholder="Song title&#10;Link: https://youtu.be/...&#10;Lyrics...&#10;===&#10;Next song title&#10;Lyrics..."></textarea>
+    <textarea id="bt" rows="16" autocapitalize="words" maxlength="400000" placeholder="Song title&#10;Link: https://youtu.be/...&#10;Lyrics...&#10;===&#10;Next song title&#10;Lyrics..."></textarea>
     <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:10px"><input type="checkbox" id="bskip" checked style="width:auto"> Skip songs whose lyrics are already in the app (the same title with different lyrics is still added)</label>
     <div id="bpv" class="bpv"></div>
     <div class="bar"><button id="bgo" disabled>Import</button><button class="g" id="bcancel">Cancel</button></div>
@@ -251,11 +254,13 @@ function findSimilar(lyrics,ignoreId,extra){
   return best;
 }
 
+/* First letter of every word is a capital (rest of the word is left alone, so don't stays don't) */
+function capWords(t){return String(t||'').replace(/(^|[\s\-\/("\[\u201c\u2018])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase())}
 function cleanLyrics(t){
-  return String(t||'').replace(/\r\n?/g,'\n').replace(/[\u00a0\u200b\ufeff]/g,' ')
+  return capWords(String(t||'').replace(/\r\n?/g,'\n').replace(/[\u00a0\u200b\ufeff]/g,' ')
     .split('\n').map(l=>l.replace(/\s+$/,'')).join('\n')   /* strip trailing spaces; whitespace-only lines become empty */
     .replace(/\n{3,}/g,'\n\n')                              /* many blank lines -> exactly one (stanza break) */
-    .replace(/^\n+|\n+$/g,'');                               /* no blank lines at start or end */
+    .replace(/^\n+|\n+$/g,''));                              /* no blank lines at start or end */
 }
 function ytId(u){const m=u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);return m?m[1]:null}
 function panel(p){document.body.classList.toggle('viewing',p==='view');document.body.classList.toggle('nosearch',p==='bulk');['list','form','view','bulk'].forEach(x=>$(x).classList.toggle('hide',x!==p));$('pl').classList.toggle('hide',p!=='view'||!cur||!getLinks(cur).length);window.scrollTo(0,0);if(window.__fit)window.__fit()}
@@ -271,7 +276,7 @@ function render(){
     const d=document.createElement('div');d.className='song';
     const n=document.createElement('div');n.className='num';n.textContent='#'+s.number;
     const w=document.createElement('div'),t=document.createElement('div');
-    w.className='w';t.className='t';t.textContent=s.title;w.append(t);
+    w.className='w';t.className='t';t.textContent=capWords(s.title);w.append(t);
     const p=document.createElement('button');p.type='button';p.className='pbtn';p.textContent='▶';
     if(getLinks(s).length){p.title='Play';p.setAttribute('aria-label','Play '+s.title);p.onclick=e=>{e.stopPropagation();show(s,true)}}
     else{p.disabled=true;p.title='No video yet';p.setAttribute('aria-label','No video yet');p.style.opacity='.35'}
@@ -337,7 +342,7 @@ function step(d){
   if(n)show(n,true); /* opening via Next/Prev starts the video automatically */
 }
 function show(s,auto){
-  cur=s;$('vt').textContent='#'+s.number+'  '+s.title;
+  cur=s;$('vt').textContent='#'+s.number+'  '+capWords(s.title);
   $('vl').textContent=cleanLyrics(s.lyrics)||'(no lyrics yet)';$('vl').style.fontSize=fs+'px';
   setFull(false);playLink(0,auto);
   panel('view');paintNav();
@@ -359,20 +364,20 @@ async function autoTitle(v){
     try{
       const r=await fetch(api+encodeURIComponent(url));if(!r.ok)continue;
       let t=String((await r.json()).title||'').replace(/\s*[\(\[](official|lyrics?|audio|video|hd)[^\)\]]*[\)\]]/gi,'').replace(/\s+/g,' ').trim();
-      if(t&&!$('ti').value.trim()){$('ti').value=t;return}
+      if(t&&!$('ti').value.trim()){$('ti').value=capWords(t);return}
     }catch(e){}
   }
 }
 function formLinks(){return[...new Set([...$('lks').querySelectorAll('input')].flatMap(i=>splitLinks(i.value)))]}
 function openForm(s){
   editing=s||null;document.querySelector('#form h2').textContent=s?'Edit song #'+s.number:'Add song';
-  $('ti').value=s?s.title:'';$('ly').value=s?cleanLyrics(s.lyrics):'';
+  $('ti').value=s?capWords(s.title):'';$('ly').value=s?cleanLyrics(s.lyrics):'';
   $('lks').textContent='';rawLinks(s).forEach(addLinkRow);if(!$('lks').children.length)addLinkRow('');
   panel('form');
 }
 async function save(){
   if(!fdb){alert('Firebase is not set up yet');return}
-  const title=$('ti').value.trim(),lyrics=cleanLyrics($('ly').value),links=formLinks(),youtube=links[0]||'';
+  const title=capWords($('ti').value.trim()),lyrics=cleanLyrics($('ly').value),links=formLinks(),youtube=links[0]||'';
   if(!title){alert('Please enter a title');return}
   const bad=links.find(l=>!ytId(l));
   if(bad){alert('This link is not recognised:\n'+bad);return}
@@ -414,7 +419,7 @@ function openFromHash(){
 $('shr').onclick=async()=>{
   if(!cur)return;
   const body=cleanLyrics(cur.lyrics),link=songLink(cur);
-  const text='#'+cur.number+' '+cur.title+(body?'\n\n'+body:'')+'\n\n'+(getLinks(cur).length?getLinks(cur).join('\n')+'\n\n':'')+'Echoes of Worship: '+link;
+  const text='#'+cur.number+' '+capWords(cur.title)+(body?'\n\n'+body:'')+'\n\n'+(getLinks(cur).length?getLinks(cur).join('\n')+'\n\n':'')+'Echoes of Worship: '+link;
   const btn=$('shr'),old=btn.textContent;
   try{
     if(navigator.share){await navigator.share({title:'#'+cur.number+' '+cur.title,text});return}
@@ -433,7 +438,7 @@ function parseBulkText(t){
     const lines=block.split('\n');
     while(lines.length&&!lines[0].trim())lines.shift();
     if(!lines.length)return;
-    const title=lines.shift().trim().replace(/^title\s*[:\-]\s*/i,'');
+    const title=capWords(lines.shift().trim().replace(/^title\s*[:\-]\s*/i,''));
     const links=[];
     for(;;){
       while(lines.length&&!lines[0].trim())lines.shift();
@@ -469,12 +474,12 @@ function parseCSV(t){
   const find=(...n)=>h.findIndex(x=>n.includes(x));
   const t2=find('title','name','song','song title');
   if(t2>=0){ti=t2;li=find('lyrics','words','text');ki=find('link','youtube','video','url','youtube link');start=1}
-  return clean.slice(start).map(r=>({title:(r[ti]||'').trim(),lyrics:cleanLyrics(li>=0?r[li]:''),links:splitLinks(ki>=0?r[ki]:'')}));
+  return clean.slice(start).map(r=>({title:capWords((r[ti]||'').trim()),lyrics:cleanLyrics(li>=0?r[li]:''),links:splitLinks(ki>=0?r[ki]:'')}));
 }
 function parseJSON(t){
   let a;try{a=JSON.parse(t)}catch(e){throw new Error('That JSON file could not be read')}
   if(!Array.isArray(a))a=a.songs||[];
-  return a.map(o=>({title:String(o.title||o.name||'').trim(),lyrics:cleanLyrics(o.lyrics||o.words||''),links:[...(Array.isArray(o.links)?o.links.flatMap(x=>splitLinks(x)):splitLinks(o.links)),...splitLinks(o.link||o.youtube||o.video||o.url)]}));
+  return a.map(o=>({title:capWords(String(o.title||o.name||'').trim()),lyrics:cleanLyrics(o.lyrics||o.words||''),links:[...(Array.isArray(o.links)?o.links.flatMap(x=>splitLinks(x)):splitLinks(o.links)),...splitLinks(o.link||o.youtube||o.video||o.url)]}));
 }
 function bulkPreview(){
   const box=$('bpv');box.textContent='';
@@ -524,7 +529,7 @@ $('bf').onchange=async e=>{
 };
 async function addOne(it){
   const cref=fdb.doc('meta/counter'),sref=fdb.collection('songs').doc();let num;
-  const title=it.title,lyrics=it.lyrics,links=[...new Set((it.links||[]).filter(ytId))],youtube=links[0]||'';
+  const title=capWords(it.title),lyrics=it.lyrics,links=[...new Set((it.links||[]).filter(ytId))],youtube=links[0]||'';
   await fdb.runTransaction(async tx=>{
     const c=await tx.get(cref);num=(c.exists?c.data().n:0)+1;
     tx.set(cref,{n:num});
@@ -566,6 +571,8 @@ $('add').onclick=()=>openForm();
 $('addlk').onclick=()=>addLinkRow('').focus();
 document.querySelectorAll('.pvb').forEach(b=>b.onclick=()=>step(-1));
 document.querySelectorAll('.nxb').forEach(b=>b.onclick=()=>step(1));
+$('ti').onblur=()=>{$('ti').value=capWords($('ti').value)};
+$('ly').onblur=()=>{$('ly').value=capWords($('ly').value)};
 $('save').onclick=save;
 $('cancel').onclick=()=>cur?show(cur):home();
 $('back').onclick=home;
