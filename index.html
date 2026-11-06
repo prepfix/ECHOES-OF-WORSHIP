@@ -254,8 +254,8 @@ function findSimilar(lyrics,ignoreId,extra){
   return best;
 }
 
-/* First letter of every word is a capital (rest of the word is left alone, so don't stays don't) */
-function capWords(t){return String(t||'').replace(/(^|[\s\-\/("\[\u201c\u2018])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase())}
+/* Only the first letter of every word is a capital; the rest of the word is lowercase */
+function capWords(t){return String(t||'').toLowerCase().replace(/(^|[\s\-\/("\[\u201c\u2018])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase())}
 function cleanLyrics(t){
   return capWords(String(t||'').replace(/\r\n?/g,'\n').replace(/[\u00a0\u200b\ufeff]/g,' ')
     .split('\n').map(l=>l.replace(/\s+$/,'')).join('\n')   /* strip trailing spaces; whitespace-only lines become empty */
