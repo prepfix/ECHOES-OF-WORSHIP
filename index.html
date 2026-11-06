@@ -97,7 +97,7 @@ body.viewing main{padding-bottom:calc(var(--pl-h,200px) + 16px)}
   <div id="form" class="hide">
     <h2>Add song</h2>
     <p class="note">The song number is assigned automatically. Once saved, only the admin can change or remove it.</p>
-    <label>Title</label><input id="ti" maxlength="150">
+    <label>Title</label><input id="ti" maxlength="150" placeholder="Leave empty to fill from a screenshot or video link">
     <label>YouTube links</label><div id="lks"></div><button type="button" class="g" id="addlk" style="margin-top:2px">+ Add another link</button>
     <label>Lyrics</label>
     <div class="ocr">
@@ -106,7 +106,7 @@ body.viewing main{padding-bottom:calc(var(--pl-h,200px) + 16px)}
         <select id="ocrlang" aria-label="Language of the lyrics"><option value="eng">English</option><option value="eng+swa">English + Swahili</option></select>
       </div>
       <input type="file" id="ocrf" accept="image/*" multiple class="hide">
-      <p class="note" id="ocrst">Choose one or more screenshots (in order). The text is read on your phone and placed below, so check it before saving.</p>
+      <p class="note" id="ocrst">Choose one or more screenshots (in order). Only the lyrics are read - menus, numbers and the title line are left out. If the Title box is empty it is filled from the screenshot. Check everything before saving.</p>
     </div>
     <textarea id="ly" rows="14" maxlength="15000"></textarea>
     <div class="bar"><button id="save">Save</button><button class="g" id="cancel">Cancel</button></div>
@@ -352,7 +352,20 @@ function addLinkRow(v){
   const i=document.createElement('input');i.placeholder='https://youtu.be/...';i.value=v||'';
   const x=document.createElement('button');x.type='button';x.className='d';x.textContent='✕';x.title='Remove this link';x.setAttribute('aria-label','Remove this link');
   x.onclick=()=>{r.remove();if(!$('lks').children.length)addLinkRow('')};
+  i.addEventListener('change',()=>autoTitle(i.value));i.addEventListener('paste',()=>setTimeout(()=>autoTitle(i.value),50));
   r.append(i,x);$('lks').append(r);return i;
+}
+/* If the Title box is empty, fill it from the YouTube video's title (you can still edit it) */
+async function autoTitle(v){
+  const u=splitLinks(v)[0];if(!u||!ytId(u)||$('ti').value.trim())return;
+  const id=ytId(u),url='https://www.youtube.com/watch?v='+id;
+  for(const api of ['https://noembed.com/embed?url=','https://www.youtube.com/oembed?format=json&url=']){
+    try{
+      const r=await fetch(api+encodeURIComponent(url));if(!r.ok)continue;
+      let t=String((await r.json()).title||'').replace(/\s*[\(\[](official|lyrics?|audio|video|hd)[^\)\]]*[\)\]]/gi,'').replace(/\s+/g,' ').trim();
+      if(t&&!$('ti').value.trim()){$('ti').value=t;return}
+    }catch(e){}
+  }
 }
 function formLinks(){return[...new Set([...$('lks').querySelectorAll('input')].flatMap(i=>splitLinks(i.value)))]}
 function openForm(s){
@@ -585,13 +598,15 @@ document.addEventListener('copy',e=>{
 });
 </script>
 <script>
-/* ===== Scan lyrics from screenshot (OCR) ===== */
+/* ===== Scan lyrics from screenshot (OCR): reads ONLY the lyrics panel ===== */
 (function(){
   const TJS='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
   const btn=document.getElementById('ocrbtn'),inp=document.getElementById('ocrf'),st=document.getElementById('ocrst'),
-        sel=document.getElementById('ocrlang'),ly=document.getElementById('ly');
+        sel=document.getElementById('ocrlang'),ly=document.getElementById('ly'),ti=document.getElementById('ti');
   if(!btn)return;
   const say=t=>{st.textContent=t};
+  const med=a=>{const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+  const letters=t=>(String(t).match(/\p{L}/gu)||[]).length;
   function loadLib(){
     return new Promise((res,rej)=>{
       if(window.Tesseract)return res();
@@ -600,58 +615,149 @@ document.addEventListener('copy',e=>{
       document.head.appendChild(sc);
     });
   }
-  /* Prepare image: upscale small shots, grayscale, flip light-on-dark text to dark-on-light */
-  function prep(file){
+  function loadImg(file){
     return new Promise((res,rej)=>{
       const url=URL.createObjectURL(file),img=new Image();
-      img.onload=()=>{
-        try{
-          let w=img.naturalWidth,h=img.naturalHeight;
-          const k=w<1400?1400/w:(w>3000?3000/w:1);w=Math.round(w*k);h=Math.round(h*k);
-          const c=document.createElement('canvas');c.width=w;c.height=h;
-          const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,w,h);
-          const d=x.getImageData(0,0,w,h),p=d.data;let sum=0,n=0;
-          for(let i=0;i<p.length;i+=4){const g=.299*p[i]+.587*p[i+1]+.114*p[i+2];p[i]=p[i+1]=p[i+2]=g;if((i/4)%7===0){sum+=g;n++}}
-          const inv=(sum/n)<128;
-          if(inv)for(let i=0;i<p.length;i+=4){p[i]=p[i+1]=p[i+2]=255-p[i]}
-          x.putImageData(d,0,0);URL.revokeObjectURL(url);c.toBlob(b=>b?res(b):rej(new Error('Image error')),'image/png');
-        }catch(e){URL.revokeObjectURL(url);rej(e)}
-      };
+      img.onload=()=>{URL.revokeObjectURL(url);res(img)};
       img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('Could not open that image'))};
       img.src=url;
     });
   }
-  function tidy(t){
-    return String(t||'').replace(/\r\n?/g,'\n').split('\n')
-      .map(l=>l.replace(/[|¦]/g,'I').replace(/\s{2,}/g,' ').trim())
-      .filter((l,i,a)=>!(l&&/^[^\p{L}\p{N}]+$/u.test(l)))   /* drop lines that are only symbols */
-      .join('\n');
+  /* longest band of true values; gaps up to tol are bridged */
+  function longestRun(f,tol){
+    let best=[0,-1],s=-1,last=-1;
+    for(let y=0;y<f.length;y++){
+      if(f[y]){if(s<0)s=y;last=y}
+      else if(s>=0&&y-last>tol){if(last-s>best[1]-best[0])best=[s,last];s=-1}
+    }
+    if(s>=0&&last-s>best[1]-best[0])best=[s,last];
+    return best;
+  }
+  /* Find the lyrics panel: the biggest band of the screen that is mostly light (or mostly dark).
+     Status bar, app bar, title, number, bottom buttons are outside it and get cut away. */
+  function findPanel(img){
+    const W=img.naturalWidth,H=img.naturalHeight,sw=Math.min(300,W),sh=Math.max(1,Math.round(H*sw/W));
+    const c=document.createElement('canvas');c.width=sw;c.height=sh;
+    const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,sw,sh);
+    const p=x.getImageData(0,0,sw,sh).data,g=new Uint8Array(sw*sh),hist=new Array(256).fill(0);
+    for(let i=0;i<sw*sh;i++){const v=(.299*p[i*4]+.587*p[i*4+1]+.114*p[i*4+2])|0;g[i]=v;hist[v]++}
+    const tot=sw*sh;let sum=0;for(let i=0;i<256;i++)sum+=i*hist[i];
+    let sB=0,wB=0,mx=-1,th=128;
+    for(let i=0;i<256;i++){
+      wB+=hist[i];if(!wB)continue;const wF=tot-wB;if(!wF)break;
+      sB+=i*hist[i];const mB=sB/wB,mF=(sum-sB)/wF,v=wB*wF*(mB-mF)*(mB-mF);
+      if(v>mx){mx=v;th=i}
+    }
+    const rf=new Float32Array(sh);
+    for(let y=0;y<sh;y++){let n=0;for(let xx=0;xx<sw;xx++)if(g[y*sw+xx]>th)n++;rf[y]=n/sw}
+    const tol=Math.max(2,Math.round(sh*.02));
+    const a=longestRun(Array.from(rf,v=>v>.5),tol),b=longestRun(Array.from(rf,v=>v<=.5),tol);
+    const la=a[1]-a[0]+1,lb=b[1]-b[0]+1,lightWins=la>=lb,run=lightWins?a:b,len=Math.max(la,lb);
+    if(len<sh*.2||len>sh*.92)return null;          /* nothing to cut away: whole picture is one panel */
+    const P=v=>lightWins?v>th:v<=th,cf=[];
+    for(let xx=0;xx<sw;xx++){let n=0,t=0;for(let y=run[0];y<=run[1];y++){t++;if(P(g[y*sw+xx]))n++}cf.push(n/t>.5)}
+    let cr=longestRun(cf,Math.max(1,Math.round(sw*.01)));
+    if(cr[1]-cr[0]+1<sw*.3)cr=[0,sw-1];
+    const kx=W/sw,ky=H/sh,ix=W*.012,iy=H*.006;
+    const x0=cr[0]*kx+ix,x1=(cr[1]+1)*kx-ix,y0=run[0]*ky+iy,y1=(run[1]+1)*ky-iy;
+    if(x1-x0<50||y1-y0<50)return null;
+    return{x:x0,y:y0,w:x1-x0,h:y1-y0,top:run[0]*ky};
+  }
+  /* crop, upscale, and make coloured text (orange, red...) dark on a light page */
+  function render(img,b){
+    const k=b.w<1400?1400/b.w:(b.w>3000?3000/b.w:1),w=Math.round(b.w*k),h=Math.round(b.h*k);
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,b.x,b.y,b.w,b.h,0,0,w,h);
+    const d=x.getImageData(0,0,w,h),p=d.data;let sum=0,n=0;
+    for(let i=0;i<p.length;i+=28){sum+=.299*p[i]+.587*p[i+1]+.114*p[i+2];n++}
+    const light=(sum/n)>=128;
+    for(let i=0;i<p.length;i+=4){
+      const v=light?Math.min(p[i],p[i+1],p[i+2]):255-Math.max(p[i],p[i+1],p[i+2]);
+      p[i]=p[i+1]=p[i+2]=v;
+    }
+    x.putImageData(d,0,0);
+    return new Promise((res,rej)=>c.toBlob(o=>o?res(o):rej(new Error('Image error')),'image/png'));
+  }
+  function getLines(d){
+    if(Array.isArray(d.lines)&&d.lines.length)return d.lines;
+    if(Array.isArray(d.blocks)){
+      const o=[];d.blocks.forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>o.push(l))));
+      if(o.length)return o;
+    }
+    return null;
+  }
+  const tidyLine=t=>String(t||'').replace(/[|¦]/g,'I').replace(/\s{2,}/g,' ').trim();
+  function tidyText(t){
+    return String(t||'').replace(/\r\n?/g,'\n').split('\n').map(tidyLine)
+      .filter(l=>!(l&&/^[^\p{L}\p{N}]+$/u.test(l))).join('\n');
+  }
+  /* Lines -> stanzas. A single line standing alone as the first/last stanza is a title or label, so it is
+     not added to the lyrics (the first one is returned as a title suggestion). */
+  function build(lines,cropped,dropFirst,dropLast){
+    let L=lines.map(l=>{const b=l.bbox||{};return{t:tidyLine(l.text),y0:b.y0,y1:b.y1,h:b.y1-b.y0,c:l.confidence||0}})
+      .filter(l=>isFinite(l.h)&&letters(l.t)>=2&&!(l.c<45&&l.t.length<8));
+    L.sort((a,b)=>a.y0-b.y0);
+    if(!cropped&&L.length>=4){const mh=med(L.map(l=>l.h));L=L.filter(l=>l.h>=mh*.65&&l.h<=mh*1.45)}
+    if(!L.length)return{text:'',first:''};
+    const cy=l=>(l.y0+l.y1)/2,diffs=[];
+    for(let i=1;i<L.length;i++)diffs.push(cy(L[i])-cy(L[i-1]));
+    const pitch=diffs.length?med(diffs):0,paras=[[L[0].t]];
+    for(let i=1;i<L.length;i++){if(pitch&&diffs[i-1]>pitch*1.6)paras.push([]);paras[paras.length-1].push(L[i].t)}
+    let first='';
+    if(dropFirst&&paras.length>1&&paras[0].length===1){first=paras[0][0];paras.shift()}
+    if(dropLast&&paras.length>1&&paras[paras.length-1].length===1)paras.pop();
+    return{text:paras.map(p=>p.join('\n')).join('\n\n'),first:first.length<=80?first:''};
+  }
+  /* title guess from the header above the lyrics panel: the tallest real text line */
+  function headerTitle(lines){
+    let best=null;
+    lines.forEach(l=>{
+      const t=tidyLine(l.text),b=l.bbox||{},h=b.y1-b.y0;
+      if(!isFinite(h)||letters(t)<3||/^\d/.test(t)||/%|kb\/?s|\d:\d\d/i.test(t)||t.length>80)return;
+      if(!best||h>=best.h)best={t:t.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}!?.)]+$/gu,''),h};
+    });
+    return best?best.t:'';
   }
   btn.onclick=()=>inp.click();
   inp.onchange=async()=>{
     const files=[...inp.files];if(!files.length)return;
     btn.disabled=true;let worker;
     try{
-      let cur_i=0,out=[];
+      let cur_i=0;
       say('Loading text reader (first time needs internet)...');
       await loadLib();
       worker=await Tesseract.createWorker(sel.value,1,{logger:m=>{
         if(m.status==='recognizing text'&&cur_i)say('Reading screenshot '+cur_i+' of '+files.length+': '+Math.round(m.progress*100)+'%');
         else if(m.status&&/load|init/.test(m.status))say('Preparing reader...');
       }});
+      const parts=[];let title='';
+      const needTitle=!ti.value.trim();
       for(let i=0;i<files.length;i++){
         cur_i=i+1;say('Reading screenshot '+cur_i+' of '+files.length+'...');
-        const blob=await prep(files[i]);
-        const r=await worker.recognize(blob);
-        out.push(tidy(r.data.text));
+        const img=await loadImg(files[i]),W=img.naturalWidth,H=img.naturalHeight;
+        const box=findPanel(img);                       /* only the lyrics panel is read */
+        const d=(await worker.recognize(await render(img,box||{x:0,y:0,w:W,h:H}))).data;
+        const lines=getLines(d);
+        const res=lines?build(lines,!!box,i===0,i===files.length-1):{text:tidyText(d.text),first:''};
+        if(res.text)parts.push(res.text);
+        if(i===0&&needTitle){
+          let ht='';
+          if(box&&box.top>=Math.max(60,H*.05)){          /* read the header above the panel just for a title */
+            say('Looking for the title...');
+            const hd=(await worker.recognize(await render(img,{x:0,y:0,w:W,h:box.top}))).data,hl=getLines(hd);
+            if(hl)ht=headerTitle(hl);
+          }
+          title=ht||res.first||'';
+        }
       }
-      const text=out.filter(Boolean).join('\n\n');
-      if(!text.trim()){say('No text found. Try a clearer, closer screenshot.');}
+      const text=parts.join('\n\n');
+      if(!text.trim()){say('No lyrics found. Try a clearer screenshot that shows the lyrics.')}
       else{
         const old=ly.value.trim();
         ly.value=cleanLyrics(old?old+'\n\n'+text:text);
-        say('Done. Please read through the lyrics and fix any mistakes before saving.');
-        ly.focus();
+        let msg='Done. Please read through the lyrics and fix any mistakes before saving.';
+        if(title&&!ti.value.trim()){ti.value=title;msg='Done. Title set to "'+title+'" - please check it and the lyrics before saving.'}
+        say(msg);ly.focus();
       }
     }catch(e){say('Scan failed: '+(e&&e.message?e.message:e))}
     finally{try{if(worker)await worker.terminate()}catch(e){}btn.disabled=false;inp.value=''}
