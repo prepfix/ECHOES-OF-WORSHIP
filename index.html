@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Choir Song Book</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--tx:#1d1b18;--mu:#6d675e;--ac:#5b3fa8;--ac2:#fff;--bd:#ddd6c8;--dg:#b3261e}
+@media (prefers-color-scheme:dark){:root{--bg:#15131a;--card:#201d29;--tx:#f0ecf7;--mu:#a49db3;--ac:#a98bff;--ac2:#15131a;--bd:#38334a;--dg:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 12px;border-bottom:1px solid var(--bd)}
+h1{font-size:18px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+.row{display:flex;gap:8px;align-items:center}
+input,textarea{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);font:inherit}
+button{border:0;border-radius:10px;padding:10px 14px;background:var(--ac);color:var(--ac2);font:inherit;font-weight:600;cursor:pointer}
+button.g{background:transparent;color:var(--ac);border:1px solid var(--bd)}
+button.d{background:transparent;color:var(--dg);border:1px solid var(--bd)}
+button.l{background:none;border:0;color:var(--mu);font-weight:400;font-size:13px;padding:2px 6px}
+main{padding:12px;max-width:760px;margin:0 auto}
+.song{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer}
+.num{min-width:48px;text-align:center;font-weight:700;color:var(--ac)}
+.t{font-weight:600}.s{color:var(--mu);font-size:13px}
+.lyrics{white-space:pre-wrap;line-height:1.7;padding-bottom:260px}
+.player{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--bd);padding:8px 12px;z-index:6;display:flex;gap:10px;align-items:center}
+.player .box{width:200px;aspect-ratio:16/9;background:#000;border-radius:8px;overflow:hidden;flex:none}
+.player.big{flex-direction:column;align-items:stretch}
+.player.big .box{width:min(100%,420px)}
+iframe{width:100%;height:100%;border:0}
+.hide{display:none!important}
+label{display:block;font-weight:600;margin:12px 0 4px}
+.note{color:var(--mu);font-size:13px;margin:6px 0}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+</style></head>
+<body>
+<header>
+  <h1><span>🎵 Choir Song Book</span><button class="l" id="adm">Admin</button></h1>
+  <div class="row"><input id="q" type="search" placeholder="Search number, title or lyrics"><button id="add">+ Add</button></div>
+</header>
+<main>
+  <p id="cfgwarn" class="note hide">Firebase is not set up yet. Fill in the config at the top of the script (see setup steps).</p>
+  <div id="list"></div>
+
+  <div id="form" class="hide">
+    <h2>Add song</h2>
+    <p class="note">The song number is assigned automatically. Once saved, only the admin can change or remove it.</p>
+    <label>Title</label><input id="ti" maxlength="150">
+    <label>YouTube link</label><input id="yt" placeholder="https://youtu.be/...">
+    <label>Lyrics</label><textarea id="ly" rows="14" maxlength="15000"></textarea>
+    <div class="bar"><button id="save">Save</button><button class="g" id="cancel">Cancel</button></div>
+  </div>
+
+  <div id="view" class="hide">
+    <div class="bar"><button class="g" id="back">← Back</button>
+      <button class="g admin hide" id="edit">Edit</button><button class="d admin hide" id="del">Delete</button>
+      <button class="g" id="fm">A−</button><button class="g" id="fp">A+</button></div>
+    <h2 id="vt"></h2>
+    <div id="vl" class="lyrics"></div>
+    <div id="pl" class="player hide">
+      <div class="box" id="pb"></div>
+      <div class="row"><button class="g" id="sz">Enlarge</button><a id="yl" class="s" target="_blank" rel="noopener">Open in YouTube</a></div>
+    </div>
+  </div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+/* ====== PASTE YOUR FIREBASE CONFIG HERE (see setup steps) ====== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBEaFNHlmBTfKWGnSdAFWPqMSO-WGoEr2E",
+  authDomain: "echoes-of-worship.firebaseapp.com",
+  projectId: "echoes-of-worship",
+  appId: "1:11407208362:web:b1332c7a7a3903e63c45d3"
+};
+/* =============================================================== */
+
+const $=id=>document.getElementById(id);
+let songs=[],cur=null,editing=null,fs=18,isAdmin=false,fdb,auth;
+
+if(firebaseConfig.apiKey==="PASTE_HERE"){$('cfgwarn').classList.remove('hide')}
+else{
+  firebase.initializeApp(firebaseConfig);fdb=firebase.firestore();auth=firebase.auth();
+  fdb.collection('songs').orderBy('number').onSnapshot(s=>{
+    songs=s.docs.map(d=>({id:d.id,...d.data()}));
+    if(cur){cur=songs.find(x=>x.id===cur.id)||cur}
+    render();
+  },e=>alert('Could not load songs: '+e.message));
+  auth.onAuthStateChanged(u=>{isAdmin=!!u;$('adm').textContent=u?'Sign out':'Admin';document.querySelectorAll('.admin').forEach(b=>b.classList.toggle('hide',!u))});
+}
+
+function ytId(u){const m=u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);return m?m[1]:null}
+function panel(p){['list','form','view'].forEach(x=>$(x).classList.toggle('hide',x!==p));$('pl').classList.toggle('hide',p!=='view'||!cur||!cur.youtube);window.scrollTo(0,0)}
+function render(){
+  const q=$('q').value.trim().toLowerCase();
+  const arr=songs.filter(s=>!q||String(s.number)===q||(s.title||'').toLowerCase().includes(q)||(s.lyrics||'').toLowerCase().includes(q));
+  const box=$('list');box.textContent='';
+  if(!arr.length){const p=document.createElement('p');p.className='note';p.textContent=songs.length?'No songs match your search.':'No songs yet. Tap + Add to add the first one.';box.append(p);return}
+  arr.forEach(s=>{
+    const d=document.createElement('div');d.className='song';
+    const n=document.createElement('div');n.className='num';n.textContent='#'+s.number;
+    const w=document.createElement('div'),t=document.createElement('div'),m=document.createElement('div');
+    t.className='t';t.textContent=s.title;m.className='s';m.textContent=s.youtube?'▶ video':'no video';
+    w.append(t,m);d.append(n,w);d.onclick=()=>show(s);box.append(d);
+  });
+}
+function home(){cur=null;$('pb').textContent='';panel('list');render()}
+function show(s){
+  cur=s;$('vt').textContent='#'+s.number+'  '+s.title;
+  $('vl').textContent=s.lyrics||'(no lyrics yet)';$('vl').style.fontSize=fs+'px';$('pb').textContent='';
+  if(s.youtube&&ytId(s.youtube)){
+    const f=document.createElement('iframe');f.src='https://www.youtube.com/embed/'+ytId(s.youtube)+'?playsinline=1';
+    f.allow='autoplay; encrypted-media; picture-in-picture';f.allowFullscreen=true;$('pb').append(f);$('yl').href=s.youtube;
+  }
+  panel('view');
+}
+function openForm(s){
+  editing=s||null;document.querySelector('#form h2').textContent=s?'Edit song #'+s.number:'Add song';
+  $('ti').value=s?s.title:'';$('yt').value=s?s.youtube||'':'';$('ly').value=s?s.lyrics||'':'';panel('form');
+}
+async function save(){
+  if(!fdb){alert('Firebase is not set up yet');return}
+  const title=$('ti').value.trim(),lyrics=$('ly').value,youtube=$('yt').value.trim();
+  if(!title){alert('Please enter a title');return}
+  if(youtube&&!ytId(youtube)){alert('That YouTube link is not recognised');return}
+  try{
+    if(editing){
+      await fdb.collection('songs').doc(editing.id).update({title,lyrics,youtube});
+      cur={...editing,title,lyrics,youtube};show(cur);
+    }else{
+      const cref=fdb.doc('meta/counter');let num;
+      const sref=fdb.collection('songs').doc();
+      await fdb.runTransaction(async tx=>{
+        const c=await tx.get(cref);num=(c.exists?c.data().n:0)+1;
+        tx.set(cref,{n:num});
+        tx.set(sref,{number:num,title,lyrics,youtube,added:Date.now()});
+      });
+      cur={id:sref.id,number:num,title,lyrics,youtube};show(cur);
+    }
+  }catch(e){alert('Could not save: '+e.message)}
+}
+async function del(){
+  if(!cur||!confirm('Delete song '+cur.number+' - '+cur.title+'?'))return;
+  try{await fdb.collection('songs').doc(cur.id).delete();home()}catch(e){alert('Could not delete: '+e.message)}
+}
+$('adm').onclick=async()=>{
+  if(!auth){alert('Firebase is not set up yet');return}
+  if(isAdmin){auth.signOut();return}
+  const email=prompt('Admin email');if(!email)return;const pw=prompt('Admin password');if(!pw)return;
+  try{await auth.signInWithEmailAndPassword(email,pw)}catch(e){alert('Sign-in failed')}
+};
+$('q').oninput=()=>{if($('list').classList.contains('hide'))home();else render()};
+$('add').onclick=()=>openForm();
+$('save').onclick=save;
+$('cancel').onclick=()=>cur?show(cur):home();
+$('back').onclick=home;
+$('edit').onclick=()=>openForm(cur);
+$('del').onclick=del;
+$('fp').onclick=()=>{fs=Math.min(40,fs+2);$('vl').style.fontSize=fs+'px'};
+$('fm').onclick=()=>{fs=Math.max(12,fs-2);$('vl').style.fontSize=fs+'px'};
+$('sz').onclick=()=>{const b=$('pl').classList.toggle('big');$('sz').textContent=b?'Shrink':'Enlarge'};
+</script>
+</body></html>
