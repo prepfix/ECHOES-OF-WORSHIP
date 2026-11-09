@@ -19,7 +19,7 @@ body{padding-top:var(--brand-h,80px);padding-bottom:var(--foot-h,48px);margin:0;
 header{position:sticky;top:var(--brand-h,80px);z-index:5;background:var(--bg);padding:10px 12px;border-bottom:1px solid var(--bd)}
 h1{font-size:18px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
 .row{display:flex;gap:8px;align-items:center}
-input,textarea{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);font:inherit}
+input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx);font:inherit}
 textarea#ly{min-height:380px;font-size:17px;line-height:1.6}
 textarea#bt{min-height:300px}
 input#ti{padding:12px 14px;font-size:17px}
@@ -75,7 +75,7 @@ details summary{cursor:pointer;color:var(--ac);font-weight:600;margin:6px 0}
 .bpv .it{display:flex;gap:8px;align-items:baseline;padding:7px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--card);margin-bottom:6px;font-size:14px}
 .bpv .it .n{color:var(--mu);min-width:26px;text-align:right;flex:none}
 .bpv .it .m{color:var(--mu);font-size:12px;margin-left:auto;text-align:right;flex:none}
-.bpv .it.skip{opacity:.55}.bpv .it.warn .m{color:var(--dg)}
+.bpv .it.rep .m{color:var(--ac);font-weight:600}.bpv .it.skip{opacity:.55}.bpv .it.warn .m{color:var(--dg)}
 .bpv .sum{font-weight:600;margin-bottom:8px}
 button:disabled{opacity:.45;cursor:not-allowed}
 button.dz{background:var(--dg);color:var(--ac2)}
@@ -146,7 +146,14 @@ Second line here</div>
     <label>Upload a file</label><input type="file" id="bf" accept=".txt,.csv,.json,text/plain,text/csv,application/json">
     <label>Or paste your songs here</label>
     <textarea id="bt" rows="16" autocapitalize="words" maxlength="400000" placeholder="Song title&#10;Link: https://youtu.be/...&#10;Lyrics...&#10;===&#10;Next song title&#10;Lyrics..."></textarea>
-    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:10px"><input type="checkbox" id="bskip" checked style="width:auto"> Skip songs whose lyrics are already in the app (the same title with different lyrics is still added)</label>
+    <label>If a song's lyrics are already in the app</label>
+    <select id="bdup">
+      <option value="smart">Replace the old song if the new one has a video it lacks, otherwise skip</option>
+      <option value="replace">Always replace the old song</option>
+      <option value="skip">Always skip it</option>
+      <option value="add">Add it as a new song anyway</option>
+    </select>
+    <p class="note">Replacing keeps the old song's number. It gets the new title, lyrics and video, and its old video links stay as extra links. (Songs with the same title but different lyrics are always added as new songs.)</p>
     <div id="bpv" class="bpv"></div>
     <div class="bar"><button id="bgo" disabled>Import</button><button class="g" id="bcancel">Cancel</button></div>
     <p id="bprog" class="note"></p>
@@ -234,6 +241,9 @@ function rawLinks(sg){
   return sg.youtube?[String(sg.youtube).trim()]:[];
 }
 function getLinks(sg){return rawLinks(sg).filter(x=>ytId(x))}
+/* joins two link lists; the same video is kept only once, even if the links are written differently */
+function mergeLinks(a,b){const seen=new Set(),out=[];[...a,...b].forEach(l=>{const k=ytId(l)||l;if(!seen.has(k)){seen.add(k);out.push(l)}});return out}
+function newVideos(links,old){const have=new Set(getLinks(old).map(ytId));return [...new Set(links.filter(ytId).map(ytId))].filter(v=>!have.has(v)).length}
 
 /* ===== Similar lyrics check (title is NOT used - two songs may share a title) ===== */
 function normWords(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean)}
@@ -261,11 +271,11 @@ function findSimilar(lyrics,ignoreId,extra){
   const q=shOf(lyrics);
   if(q.words<8)return null; /* too little text to compare */
   let best=null;
-  const test=(ly,title,label)=>{
+  const test=(ly,title,label,id)=>{
     const sc=simScore(q.set,shOf(ly).set);
-    if(sc>=0.75&&(!best||sc>best.score))best={title,label,score:sc};
+    if(sc>=0.75&&(!best||sc>best.score))best={title,label,score:sc,id};
   };
-  songs.forEach(x=>{if(x.id!==ignoreId&&x.lyrics)test(x.lyrics,x.title,'#'+x.number)});
+  songs.forEach(x=>{if(x.id!==ignoreId&&x.lyrics)test(x.lyrics,x.title,'#'+x.number,x.id)});
   (extra||[]).forEach(x=>{if(x.lyrics)test(x.lyrics,x.title,x.label)});
   return best;
 }
@@ -425,8 +435,21 @@ async function save(){
   const dup=findSimilar(lyrics,editing&&editing.id);
   if(dup){
     const msg='These lyrics are already in the app: '+dup.label+' "'+dup.title+'" ('+Math.round(dup.score*100)+'% the same).';
-    if(isAdmin){if(!confirm(msg+'\n\nTo avoid a duplicate, press Cancel. Press OK only if you really want to save it anyway.'))return}
-    else{alert(msg+'\n\nThe song was NOT saved, so there is no duplicate.');return}
+    const old=!editing&&dup.id?songs.find(s=>s.id===dup.id):null;
+    if(isAdmin&&old){
+      const nv=newVideos(links,old);
+      if(confirm(msg+'\n\nReplace #'+old.number+' with what you typed? It keeps number #'+old.number+(nv?' and gets your video link'+(nv>1?'s':''):'')+'.\n\nOK = Replace #'+old.number+'\nCancel = other choices')){
+        try{
+          const L=mergeLinks(links,rawLinks(old)),ly=lyrics||old.lyrics||'';
+          await fdb.collection('songs').doc(old.id).update({title,lyrics:ly,youtube:L[0]||'',links:L,updated:Date.now()});
+          cur={...old,title,lyrics:ly,youtube:L[0]||'',links:L};show(cur);
+        }catch(e){alert('Could not replace: '+e.message)}
+        return;
+      }
+      if(!confirm('Save it as a NEW song anyway? This makes a duplicate.\n\nOK = Save as new song\nCancel = Don\'t save'))return;
+    }
+    else if(isAdmin){if(!confirm(msg+'\n\nTo avoid a duplicate, press Cancel. Press OK only if you really want to save it anyway.'))return}
+    else{const nv=old?newVideos(links,old):0;alert(msg+'\n\nThe song was NOT saved, so there is no duplicate.'+(nv?'\n\nTo add your video link to '+dup.label+', send it to the admin.':''));return}
   }
   try{
     if(editing){
@@ -653,29 +676,36 @@ function parseJSON(t){
 }
 function bulkPreview(){
   const box=$('bpv');box.textContent='';
-  const skip=$('bskip').checked,seen=[];
-  let ok=0,sk=0,wn=0;
+  const mode=$('bdup').value,seen=[],taken=new Set();
+  let ok=0,rp=0,sk=0,wn=0;
   bulkItems.forEach((it,k)=>{
-    it.status='ok';it.note='';
-    const nb=(it.links||[]).filter(l=>!ytId(l)).length;
+    it.status='ok';it.note='';it.target=null;
+    const nb=(it.links||[]).filter(l=>!ytId(l)).length,badTxt=nb?' · '+nb+(nb===1?' link':' links')+' not recognised':'';
     if(!it.title){it.status='bad';it.note='no title - skipped'}
     else if(nb){it.status='warn';it.note=nb+(nb===1?' link':' links')+' not recognised - added without '+(nb===1?'it':'them')}
     if(it.status!=='bad'){
       const d=findSimilar(it.lyrics,null,seen);
       if(d){
         const why='lyrics like '+d.label+' "'+d.title+'" ('+Math.round(d.score*100)+'%)';
-        if(skip){it.status='skip';it.note=why+' - skipped'}
-        else{it.status='warn';it.note=why+' - will still be added'}
+        const old=d.id?songs.find(x=>x.id===d.id):null;
+        if(old&&!taken.has(old.id)){
+          const nv=newVideos(it.links||[],old);
+          if(mode==='replace'||(mode==='smart'&&nv)){it.status='rep';it.target=old;taken.add(old.id);it.note='replaces '+d.label+' "'+d.title+'"'+(nv?' · adds video':'')+badTxt}
+          else if(mode==='add'){it.status='warn';it.note=why+' - will still be added'}
+          else{it.status='skip';it.note=why+(mode==='smart'?', no new video':'')+' - skipped'}
+        }else if(mode==='add'){it.status='warn';it.note=why+' - will still be added'}
+        else{it.status='skip';it.note=why+' - skipped'}
       }
     }
-    if(it.status==='ok'||it.status==='warn'){ok++;seen.push({title:it.title,lyrics:it.lyrics,label:'#'+(k+1)+' in this list'})}else sk++;
+    if(it.status==='ok'||it.status==='warn'||it.status==='rep'){seen.push({title:it.title,lyrics:it.lyrics,label:'#'+(k+1)+' in this list'})}
+    if(it.status==='rep')rp++;else if(it.status==='ok'||it.status==='warn')ok++;else sk++;
     if(it.status==='warn')wn++;
   });
   if(!bulkItems.length){const p=document.createElement('p');p.className='note';p.textContent='Nothing to import yet. Paste songs above or upload a file.';box.append(p);$('bgo').disabled=true;$('bgo').textContent='Import';return}
   const sum=document.createElement('div');sum.className='sum';
-  sum.textContent=bulkItems.length+' found · '+ok+' will be added'+(sk?' · '+sk+' skipped':'')+(wn?' · '+wn+' warning'+(wn>1?'s':''):'');box.append(sum);
+  sum.textContent=bulkItems.length+' found · '+ok+' will be added'+(rp?' · '+rp+' will replace old songs':'')+(sk?' · '+sk+' skipped':'')+(wn?' · '+wn+' warning'+(wn>1?'s':''):'');box.append(sum);
   bulkItems.forEach((it,i)=>{
-    const d=document.createElement('div');d.className='it'+(it.status==='skip'||it.status==='bad'?' skip':'')+(it.status==='warn'||it.status==='bad'?' warn':'');
+    const d=document.createElement('div');d.className='it'+(it.status==='rep'?' rep':'')+(it.status==='skip'||it.status==='bad'?' skip':'')+(it.status==='warn'||it.status==='bad'?' warn':'');
     const n=document.createElement('span');n.className='n';n.textContent=(i+1)+'.';
     const t=document.createElement('span');t.textContent=it.title||'(no title)';
     const m=document.createElement('span');m.className='m';
@@ -683,10 +713,10 @@ function bulkPreview(){
     m.textContent=it.note||((nl?'▶ '+nl+(nl===1?' video · ':' videos · '):'no video · ')+ln+(ln===1?' line':' lines'));
     d.append(n,t,m);box.append(d);
   });
-  $('bgo').disabled=ok===0;$('bgo').textContent='Import '+ok+' song'+(ok===1?'':'s');
+  $('bgo').disabled=ok+rp===0;$('bgo').textContent=[ok?'Add '+ok+' song'+(ok===1?'':'s'):'',rp?'Replace '+rp:''].filter(Boolean).join(' · ')||'Import';
 }
 $('bt').oninput=()=>{bulkItems=parseBulkText($('bt').value);bulkPreview()};
-$('bskip').onchange=bulkPreview;
+$('bdup').onchange=bulkPreview;
 $('bf').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
   try{
@@ -707,26 +737,35 @@ async function addOne(it){
   });
   return num;
 }
+async function replaceOne(it){
+  const old=songs.find(x=>x.id===it.target.id)||it.target;
+  const title=capWords(it.title),lyrics=it.lyrics||old.lyrics||'',links=mergeLinks((it.links||[]).filter(ytId),rawLinks(old));
+  await fdb.collection('songs').doc(old.id).update({title,lyrics,youtube:links[0]||'',links,updated:Date.now()});
+  return old.number;
+}
 $('bgo').onclick=async()=>{
   if(!fdb){alert('Firebase is not set up yet');return}
-  const todo=bulkItems.filter(i=>i.status==='ok'||i.status==='warn');
-  if(!todo.length||!confirm('Add '+todo.length+' song'+(todo.length===1?'':'s')+' now?'))return;
-  $('bgo').disabled=true;$('bcancel').disabled=true;$('bt').disabled=true;$('bf').disabled=true;
-  let done=0,first=0,last=0;
+  const todo=bulkItems.filter(i=>i.status==='ok'||i.status==='warn'||i.status==='rep');
+  const nA=todo.filter(i=>i.status!=='rep').length,nR=todo.length-nA;
+  if(!todo.length||!confirm([nA?'Add '+nA+' new song'+(nA===1?'':'s'):'',nR?'Replace '+nR+' old song'+(nR===1?'':'s')+' (they keep their numbers)':''].filter(Boolean).join('\n')+'\n\nGo ahead?'))return;
+  $('bgo').disabled=true;$('bcancel').disabled=true;$('bt').disabled=true;$('bf').disabled=true;$('bdup').disabled=true;
+  let done=0,added=0,replaced=0,first=0,last=0;const repNums=[];
   try{
     for(const it of todo){
-      $('bprog').textContent='Adding '+(done+1)+' of '+todo.length+': '+it.title;
-      const n=await addOne(it);if(!first)first=n;last=n;done++;
+      $('bprog').textContent=(it.status==='rep'?'Replacing ':'Adding ')+(done+1)+' of '+todo.length+': '+it.title;
+      if(it.status==='rep'){repNums.push('#'+await replaceOne(it));replaced++}
+      else{const n=await addOne(it);if(!first)first=n;last=n;added++}
+      done++;
     }
     $('bprog').textContent='';
-    alert('Done! '+done+' song'+(done===1?'':'s')+' added (#'+first+(last!==first?' to #'+last:'')+').');
+    alert('Done!'+(added?'\n'+added+' song'+(added===1?'':'s')+' added (#'+first+(last!==first?' to #'+last:'')+').':'')+(replaced?'\n'+replaced+' song'+(replaced===1?'':'s')+' replaced: '+(repNums.length>12?repNums.slice(0,12).join(', ')+'…':repNums.join(', '))+'.':''));
     home();
   }catch(e){
     $('bprog').textContent='';
-    alert('Stopped after '+done+' of '+todo.length+' songs.\n'+e.message+'\n\nThe songs already added are saved. Remove them from your list before trying again, or tick "Skip songs whose lyrics are already in the app".');
+    alert('Stopped after '+done+' of '+todo.length+' songs.\n'+e.message+'\n\nThe songs already done are saved and have been removed from your list, so you can try again.');
     bulkItems=bulkItems.filter(i=>!(todo.indexOf(i)>=0&&todo.indexOf(i)<done));bulkPreview();
   }
-  $('bcancel').disabled=false;$('bt').disabled=false;$('bf').disabled=false;
+  $('bcancel').disabled=false;$('bt').disabled=false;$('bf').disabled=false;$('bdup').disabled=false;
 };
 $('bcancel').onclick=()=>home();
 
