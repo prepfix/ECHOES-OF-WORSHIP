@@ -79,7 +79,15 @@ details summary{cursor:pointer;color:var(--ac);font-weight:600;margin:6px 0}
 .bpv .sum{font-weight:600;margin-bottom:8px}
 button:disabled{opacity:.45;cursor:not-allowed}
 button.dz{background:var(--dg);color:var(--ac2)}
-.adminbar{display:flex;gap:8px;margin-bottom:8px}.adminbar button{flex:1}
+.adminbar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}.adminbar button{flex:1;padding:8px 6px;font-size:14px;white-space:nowrap}
+textarea#lnt{min-height:160px}
+.lit{padding:8px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--card);margin-bottom:6px;font-size:14px}
+.lit .vt{display:flex;gap:6px;align-items:baseline}.lit .vt .n{color:var(--mu);flex:none}
+.lit .vt .x{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lit .to{display:flex;gap:6px;align-items:center;margin-top:5px}
+.lit .to input{width:76px;padding:5px 8px;flex:none}
+.lit .to .r{font-size:13px;min-width:0}
+.lit.ok .to .r{color:var(--ac);font-weight:600}.lit.none .to .r,.lit.amb .to .r{color:var(--dg)}.lit.have{opacity:.6}.lit.wait .to .r{color:var(--mu)}
 .seltools{background:var(--card);border:1px solid var(--dg);border-radius:10px;padding:10px 12px;margin-bottom:8px}
 .seltools .row{flex-wrap:wrap;margin-top:8px}
 .seltools .row button{padding:6px 10px;font-size:13px}
@@ -157,6 +165,16 @@ Second line here</div>
     <div id="bpv" class="bpv"></div>
     <div class="bar"><button id="bgo" disabled>Import</button><button class="g" id="bcancel">Cancel</button></div>
     <p id="bprog" class="note"></p>
+  </div>
+
+  <div id="lnk" class="hide">
+    <h2>Add video links</h2>
+    <p class="note">Paste YouTube links, one per line. You can paste straight from WhatsApp. The app reads each video's title and finds the song it belongs to. Check the matches below, fix any that are wrong by typing the right song number, then save.</p>
+    <p class="note">To choose the song yourself, put its number or title on the same line as the link, e.g. <b>12 https://youtu.be/...</b> or <b>Amazing Grace https://youtu.be/...</b></p>
+    <textarea id="lnt" rows="8" maxlength="200000" placeholder="https://youtu.be/...&#10;https://www.youtube.com/watch?v=...&#10;12 https://youtu.be/..."></textarea>
+    <div id="lnpv" class="bpv"></div>
+    <div class="bar"><button id="lngo" disabled>Save links</button><button class="g" id="lncancel">Cancel</button></div>
+    <p id="lnprog" class="note"></p>
   </div>
 
   <div id="view" class="hide">
@@ -303,7 +321,7 @@ function cleanLyrics(t){
     .replace(/^\n+|\n+$/g,''));                              /* no blank lines at start or end */
 }
 function ytId(u){const m=u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);return m?m[1]:null}
-function panel(p){document.body.classList.toggle('viewing',p==='view');document.body.classList.toggle('nosearch',p==='bulk');['list','form','view','bulk'].forEach(x=>$(x).classList.toggle('hide',x!==p));selShow(p==='list');$('pl').classList.toggle('hide',p!=='view'||!cur||!getLinks(cur).length);window.scrollTo(0,0);if(window.__fit)window.__fit()}
+function panel(p){document.body.classList.toggle('viewing',p==='view');document.body.classList.toggle('nosearch',p==='bulk'||p==='lnk');['list','form','view','bulk','lnk'].forEach(x=>$(x).classList.toggle('hide',x!==p));selShow(p==='list');$('pl').classList.toggle('hide',p!=='view'||!cur||!getLinks(cur).length);window.scrollTo(0,0);if(window.__fit)window.__fit()}
 function render(){
   const q=$('q').value.trim().toLowerCase();
   let mode='num';try{mode=localStorage.getItem('sortmode')==='az'?'az':'num'}catch(e){}
@@ -312,9 +330,10 @@ function render(){
   if(sel.size){const ids=new Set(songs.map(s=>s.id));[...sel].forEach(id=>{if(!ids.has(id))sel.delete(id)})} /* drop songs that are gone */
   if(isAdmin){
     const ab=document.createElement('div');ab.className='adminbar';
-    const bb=document.createElement('button');bb.className='g';bb.textContent='⬆ Bulk add songs';bb.onclick=openBulk;bb.disabled=selMode;
-    const db=document.createElement('button');db.className='d';db.textContent=selMode?'✕ Stop deleting':'🗑 Bulk delete songs';db.onclick=()=>setSelMode(!selMode);
-    ab.append(bb,db);box.append(ab);
+    const bb=document.createElement('button');bb.className='g';bb.textContent='⬆ Bulk add';bb.onclick=openBulk;bb.disabled=selMode;
+    const db=document.createElement('button');db.className='d';db.textContent=selMode?'✕ Stop deleting':'🗑 Bulk delete';db.onclick=()=>setSelMode(!selMode);
+    const lb=document.createElement('button');lb.className='g';lb.textContent='🔗 Add links';lb.onclick=openLinks;lb.disabled=selMode;
+    ab.append(bb,lb,db);box.append(ab);
     if(selMode)box.append(selTools(arr));
   }
   if(!q&&mode==='az')arr.sort((a,b)=>(a.title||'').localeCompare(b.title||'',undefined,{sensitivity:'base'}));
@@ -768,6 +787,140 @@ $('bgo').onclick=async()=>{
   $('bcancel').disabled=false;$('bt').disabled=false;$('bf').disabled=false;$('bdup').disabled=false;
 };
 $('bcancel').onclick=()=>home();
+
+/* ===== Add video links alone (admin): each link goes to the song it belongs to ===== */
+let lnItems=[],lnTimer=0;const vtCache=new Map();
+const LN_NOISE=new Set('official video music audio lyrics lyric lyrical hd hq 4k live performance ft feat featuring mp4 mp3 cover visualizer full version new latest by the a'.split(' '));
+function openLinks(){lnItems=[];$('lnt').value='';$('lnprog').textContent='';lnPreview();panel('lnk')}
+function lnWords(t){return normWords(t).filter(w=>!LN_NOISE.has(w))}
+/* finds the song whose title is (almost) fully inside the text; longer, more specific titles win */
+function matchTitle(text){
+  const qw=lnWords(text),q=new Set(qw),qs=' '+qw.join(' ')+' ';if(!q.size)return null;
+  let best=null,ties=[];
+  songs.forEach(sg=>{
+    const tw=lnWords(sg.title),t=[...new Set(tw)];if(!t.length)return;
+    const hit=t.filter(w=>q.has(w)).length,cov=hit/t.length;
+    if(cov<(t.length<=2?1:0.75))return;
+    const sc=cov*0.8+(hit/q.size)*0.2+(qs.includes(' '+tw.join(' ')+' ')?0.05+tw.length*0.001:0); /* whole title in order = stronger */
+    if(!best||sc>best.sc+1e-9){best={song:sg,sc};ties=[sg]}
+    else if(Math.abs(sc-best.sc)<=1e-9)ties.push(sg);
+  });
+  return best?{song:best.song,others:ties.filter(x=>x!==best.song)}:null;
+}
+async function videoTitle(vid){
+  if(vtCache.has(vid))return vtCache.get(vid);
+  const url='https://www.youtube.com/watch?v='+vid;let t=null;
+  for(const api of ['https://noembed.com/embed?url=','https://www.youtube.com/oembed?format=json&url=']){
+    try{const r=await fetch(api+encodeURIComponent(url));if(!r.ok)continue;const j=await r.json();if(j&&j.title){t=String(j.title);break}}catch(e){}
+  }
+  vtCache.set(vid,t);return t;
+}
+function lnParse(){
+  const old=new Map(lnItems.map(i=>[i.vid,i])),out=[],seen=new Set();
+  let prev='';
+  String($('lnt').value||'').replace(/\r\n?/g,'\n').replace(/[‎‏‪-‬]/g,'').split('\n').forEach(raw=>{
+    let line=raw.replace(WA_STAMP,'').trim();
+    const urls=line.match(/https?:\/\/\S+/g)||[];
+    const yt=urls.filter(u=>ytId(u));
+    if(!yt.length){if(line&&line.length<=90&&!/omitted|deleted/i.test(line))prev=line;else if(!line){}else prev='';return}
+    let hint=line;urls.forEach(u=>hint=hint.split(u).join(' '));
+    hint=hint.replace(/\b(?:link|youtube|video|url)\s*\d*\s*[:=]/gi,' ').replace(/^[\s\-–:|,.]+|[\s\-–:|,.]+$/g,'').trim();
+    const nm=hint.match(/^#?\s*(\d{1,5})$/);
+    yt.forEach(u=>{
+      const vid=ytId(u);if(seen.has(vid))return;seen.add(vid);
+      const o=old.get(vid);
+      out.push({url:u,vid,num:nm?+nm[1]:null,hint:nm?'':hint,prev:hint?'':prev,manual:o?o.manual:null,vtitle:vtCache.has(vid)?vtCache.get(vid):undefined});
+    });
+    prev='';
+  });
+  lnItems=out;lnPreview();lnFetch();
+}
+async function lnFetch(){
+  const need=lnItems.filter(i=>i.vtitle===undefined);let k=0;
+  const work=async()=>{while(k<need.length){const it=need[k++];it.vtitle=await videoTitle(it.vid);lnRefresh(it)}};
+  await Promise.all([work(),work(),work(),work()]);
+}
+function lnEval(it){
+  it.target=null;it.status='none';it.note='';
+  const byNum=n=>{const sg=songs.find(x=>Number(x.number)===n);if(sg){it.target=sg;it.status='ok'}else it.note='There is no song #'+n};
+  if(it.manual)byNum(it.manual);
+  else if(it.num)byNum(it.num);
+  else{
+    for(const t of [it.hint,it.vtitle,it.prev]){
+      if(!t)continue;const m=matchTitle(t);
+      if(m){it.target=m.song;it.status=m.others.length?'amb':'ok';if(m.others.length)it.note='Other songs have this title too ('+m.others.slice(0,3).map(x=>'#'+x.number).join(', ')+') - check the number';break}
+    }
+    if(!it.target){
+      if(it.vtitle===undefined){it.status='wait';it.note='Reading the video title…'}
+      else it.note=it.vtitle===null?'Could not read the video title - type the song number':'No matching song - type the song number';
+    }
+  }
+  if(it.target&&getLinks(it.target).some(l=>ytId(l)===it.vid)){it.status='have';it.note='already has this video - skipped'}
+}
+function lnRow(it,i){
+  const d=document.createElement('div');d.className='lit '+it.status;
+  const v=document.createElement('div');v.className='vt';
+  const n=document.createElement('span');n.className='n';n.textContent=(i+1)+'.';
+  const x=document.createElement('span');x.className='x';x.textContent='▶ '+(it.vtitle||it.hint||it.url);x.title=it.url;
+  v.append(n,x);
+  const to=document.createElement('div');to.className='to';
+  const ar=document.createElement('span');ar.textContent='→ #';
+  const inp=document.createElement('input');inp.type='number';inp.min='1';inp.inputMode='numeric';inp.placeholder='No.';
+  inp.value=it.target?it.target.number:(it.manual||'');inp.setAttribute('aria-label','Song number for link '+(i+1));
+  inp.onchange=()=>{const val=parseInt(inp.value,10);it.manual=val>0?val:null;if(!it.manual)it.num=null;lnRefresh(it)};
+  const r=document.createElement('span');r.className='r';
+  r.textContent=(it.status==='ok'||it.status==='amb'||it.status==='have')?capWords(it.target.title)+(it.note?' · '+it.note:''):it.note;
+  to.append(ar,inp,r);d.append(v,to);it.el=d;return d;
+}
+function lnSum(){
+  const sum=$('lnpv').querySelector('.sum');
+  const go=lnItems.filter(i=>i.status==='ok'||i.status==='amb'),have=lnItems.filter(i=>i.status==='have').length,need=lnItems.filter(i=>i.status==='none').length,wait=lnItems.filter(i=>i.status==='wait').length;
+  if(sum)sum.textContent=lnItems.length+' link'+(lnItems.length===1?'':'s')+' · '+go.length+' matched'+(have?' · '+have+' already there':'')+(need?' · '+need+' need a song number':'')+(wait?' · reading '+wait+'…':'');
+  const songsN=new Set(go.map(i=>i.target.id)).size;
+  $('lngo').disabled=!go.length;$('lngo').textContent=go.length?'Save '+go.length+' link'+(go.length===1?'':'s')+(songsN!==go.length?' to '+songsN+' songs':''):'Save links';
+}
+/* redraws one row only, so a number box you are typing in is not disturbed */
+function lnRefresh(it){
+  const i=lnItems.indexOf(it);if(i<0)return;
+  lnEval(it);if(it.el&&it.el.isConnected)it.el.replaceWith(lnRow(it,i));lnSum();
+}
+function lnPreview(){
+  const box=$('lnpv');box.textContent='';
+  lnItems.forEach(lnEval);
+  if(!lnItems.length){const p=document.createElement('p');p.className='note';p.textContent='No YouTube links yet. Paste them above.';box.append(p);$('lngo').disabled=true;$('lngo').textContent='Save links';return}
+  const sum=document.createElement('div');sum.className='sum';box.append(sum);
+  lnItems.forEach((it,i)=>box.append(lnRow(it,i)));
+  lnSum();
+}
+$('lnt').oninput=()=>{clearTimeout(lnTimer);lnTimer=setTimeout(lnParse,500)};
+$('lngo').onclick=async()=>{
+  if(!fdb){alert('Firebase is not set up yet');return}
+  lnItems.forEach(lnEval);
+  const go=lnItems.filter(i=>i.status==='ok'||i.status==='amb');if(!go.length)return;
+  const by=new Map();go.forEach(i=>{if(!by.has(i.target.id))by.set(i.target.id,[]);by.get(i.target.id).push(i)});
+  const list=[...by.values()].slice(0,8).map(g=>'#'+g[0].target.number+' '+capWords(g[0].target.title)+(g.length>1?' ('+g.length+' links)':'')).join('\n');
+  if(!confirm('Add '+go.length+' video link'+(go.length===1?'':'s')+' to '+by.size+' song'+(by.size===1?'':'s')+'?\n\n'+list+(by.size>8?'\n…and '+(by.size-8)+' more':'')))return;
+  $('lngo').disabled=true;$('lncancel').disabled=true;$('lnt').disabled=true;
+  let done=0;const saved=new Set();
+  try{
+    for(const [id,g] of by){
+      const sg=songs.find(x=>x.id===id)||g[0].target;
+      $('lnprog').textContent='Saving '+(done+1)+' of '+by.size+': '+capWords(sg.title);
+      const L=mergeLinks(rawLinks(sg),g.map(i=>i.url));
+      await fdb.collection('songs').doc(id).update({links:L,youtube:L[0]||'',updated:Date.now()});
+      g.forEach(i=>saved.add(i.vid));done++;
+    }
+    $('lnprog').textContent='';
+    alert('Done! '+saved.size+' link'+(saved.size===1?'':'s')+' added to '+done+' song'+(done===1?'':'s')+'.');
+    home();
+  }catch(e){
+    $('lnprog').textContent='';
+    alert('Stopped after '+done+' of '+by.size+' songs.\n'+e.message+'\n\nThe links already saved are kept. Try again for the rest.');
+    lnItems=lnItems.filter(i=>!saved.has(i.vid));lnPreview();
+  }
+  $('lncancel').disabled=false;$('lnt').disabled=false;
+};
+$('lncancel').onclick=()=>home();
 
 $('adm').onclick=async()=>{
   if(!auth){alert('Firebase is not set up yet');return}
