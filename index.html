@@ -187,7 +187,7 @@ Second line here</div>
     <button id="xf" class="hide">✕ Exit full screen</button>
     <div id="pl" class="player hide">
       <div class="box" id="pb"></div>
-      <div class="row"><button class="g" id="sz">Enlarge</button><button class="g" id="fs">Full screen</button><span id="lkb" style="display:contents"></span><a id="yto" target="_blank" rel="noopener noreferrer" style="display:none;padding:4px 10px;font-size:12px;border-radius:8px;background:#c4302b;color:#fff;text-decoration:none;font-weight:700;align-items:center">▶ Open on YouTube</a><button class="g pvb">◀ Prev</button><button class="nxb">Next ▶</button></div>
+      <div class="row"><button class="g" id="sz">Enlarge</button><button class="g" id="fs">Full screen</button><span id="lkb" style="display:contents"></span><a id="yto" target="_blank" rel="noopener noreferrer" style="display:none;padding:4px 10px;font-size:12px;border-radius:8px;background:#c4302b;color:#fff;text-decoration:none;font-weight:700;align-items:center">▶ Open on YouTube</a><button class="g" id="pm" type="button"></button><button class="g" id="ap" type="button"></button><div id="pst" class="s" style="width:100%;font-size:12px"></div><button class="g pvb">◀ Prev</button><button class="nxb">Next ▶</button></div>
     </div>
   </div>
 </main>
@@ -401,33 +401,76 @@ function loadYT(cb){
   sc.onerror=function(){ytApiState=0;ytApiQ.splice(0).forEach(function(f){f(true)})};
   document.head.append(sc);
 }
-function ytFallback(id){
+/* Videos YouTube has refused to embed are remembered for 14 days, so Next can send them straight to YouTube */
+function ytNeedGet(){try{var o=JSON.parse(localStorage.getItem('ytneed')||'{}'),n=Date.now(),k;for(k in o)if(n-o[k]>12096e5)delete o[k];return o}catch(e){return{}}}
+function ytNeedAdd(id){try{var o=ytNeedGet();o[id]=Date.now();localStorage.setItem('ytneed',JSON.stringify(o))}catch(e){}}
+function ytUrl(id){return 'https://www.youtube.com/watch?v='+id}
+/* Always the same named window/tab: each new video replaces the one playing there instead of opening a fresh tab */
+function openYT(id){try{var w=window.open(ytUrl(id),'echoes_yt');if(w)try{w.focus()}catch(e){}return w}catch(e){return null}}
+function ytLinkClick(id){return function(e){if(openYT(id))e.preventDefault()}}
+/* Default player: "app" (plays inside Echoes, YouTube only if the video is blocked) or "yt" (Next/Play always open YouTube) */
+function getPref(){try{return localStorage.getItem('playpref')==='yt'?'yt':'app'}catch(e){return'app'}}
+var curMode='app';
+function paintPref(){var b=$('pm');if(b)b.textContent='Default: '+(getPref()==='yt'?'YouTube':'In app')}
+function paintStatus(){
+  var e=$('pst');if(!e)return;
+  var y=getPref()==='yt',t;
+  if(curMode==='blocked')t='Blocked in the app, so this song opens on YouTube.';
+  else if(curMode==='yt')t='This song opens on YouTube (your default).';
+  else t='This song plays in the app.'+(y?' Next opens on YouTube.':'');
+  e.textContent=t;
+}
+(function(){var b=$('pm');if(b)b.onclick=function(){try{localStorage.setItem('playpref',getPref()==='yt'?'app':'yt')}catch(e){}paintPref();paintStatus()};paintPref()})();
+/* Autoplay: when a video playing inside the app ends, move on to the next song that has a link */
+var chainMode=false;
+function autoOn(){try{return localStorage.getItem('autoplay')!=='off'}catch(e){return true}}
+function paintAp(){var b=$('ap');if(b)b.textContent='Autoplay: '+(autoOn()?'On':'Off')}
+(function(){var b=$('ap');if(b)b.onclick=function(){try{localStorage.setItem('autoplay',autoOn()?'off':'on')}catch(e){}paintAp()};paintAp()})();
+function autoNext(){
+  if(!autoOn()||!cur)return;
+  var L=navList(),i=L.findIndex(function(x){return x.id===cur.id});
+  for(var j=i+1;j<L.length;j++){
+    if(getLinks(L[j]).length){chainMode=true;try{show(L[j],true)}finally{chainMode=false}return}
+  }
+  var e=$('pst');if(e)e.textContent='End of the list.';
+}
+function ytFallback(id,persist,mode){
+  if(persist)ytNeedAdd(id);
+  curMode=mode||'blocked';paintStatus();
   var box=$('pb');box.textContent='';
   var a=document.createElement('a');
-  a.href='https://www.youtube.com/watch?v='+id;a.target='_blank';a.rel='noopener noreferrer';
+  a.href=ytUrl(id);a.target='_blank';a.rel='noopener noreferrer';a.onclick=ytLinkClick(id);
   a.textContent='▶ Watch on YouTube';
   a.style.cssText='display:flex;align-items:center;justify-content:center;width:100%;height:100%;padding:6px;box-sizing:border-box;text-align:center;color:#fff;background:#c4302b;font-weight:700;font-size:13px;text-decoration:none;line-height:1.25';
   box.append(a);
 }
 function playLink(i,auto){
   var L=getLinks(cur);linkIdx=i;$('pb').textContent='';
+  var yto=$('yto');
   if(L[i]){
     var id=ytId(L[i]),tok=++playTok;
+    if(yto){yto.href=ytUrl(id);yto.onclick=ytLinkClick(id);yto.style.display='inline-flex'}
+    var blocked=!!ytNeedGet()[id];
+    if(blocked||getPref()==='yt'){ /* blocked in the app, or YouTube is the chosen default: use the same YouTube window */
+      ytFallback(id,false,blocked?'blocked':'yt');
+      if(auto&&!chainMode)openYT(id);
+      if(auto&&chainMode){var st2=$('pst');if(st2)st2.textContent='Tap Watch on YouTube to play this song. The app can’t open YouTube by itself.'}
+      paintLinks();return;
+    }
+    curMode='app';paintStatus();
     var f=document.createElement('iframe');
     var org='';try{if(/^https?:$/.test(location.protocol))org='&origin='+encodeURIComponent(location.origin)}catch(e){}
     f.src='https://www.youtube-nocookie.com/embed/'+id+'?playsinline=1&rel=0&modestbranding=1&fs=0&iv_load_policy=3&enablejsapi=1'+org+(auto?'&autoplay=1':'');
     f.setAttribute('sandbox','allow-scripts allow-same-origin');
     f.referrerPolicy='strict-origin-when-cross-origin';
     f.allow='autoplay; encrypted-media';f.allowFullscreen=false;$('pb').append(f);
-    var yto=$('yto');if(yto){yto.href='https://www.youtube.com/watch?v='+id;yto.style.display='inline-flex'}
     var ready=false;
-    setTimeout(function(){if(tok===playTok&&!ready)ytFallback(id)},7000); /* player never reported ready (e.g. embed blocked) */
+    setTimeout(function(){if(tok===playTok&&!ready)ytFallback(id,false,'blocked')},7000); /* never reported ready: show the button (not remembered) */
     loadYT(function(failed){
       if(failed||tok!==playTok||!(window.YT&&YT.Player))return;
-      try{new YT.Player(f,{events:{onReady:function(){ready=true},onStateChange:function(){ready=true},onError:function(){if(tok===playTok)ytFallback(id)}}})}catch(e){}
+      try{new YT.Player(f,{events:{onReady:function(){ready=true},onStateChange:function(ev){ready=true;if(ev&&ev.data===0&&tok===playTok)autoNext()},onError:function(){if(tok===playTok)ytFallback(id,true,'blocked')}}})}catch(e){}
     });
-  }
-  else{var y=$('yto');if(y)y.style.display='none'}
+  }else{if(yto)yto.style.display='none';var st=$('pst');if(st)st.textContent=''}
   paintLinks();
 }
 function navList(){return(cur&&order.some(x=>x.id===cur.id))?order:songs}
