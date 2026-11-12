@@ -480,7 +480,7 @@ function render(){
     if(window.__fit)window.__fit();
     return;
   }
-  if(songs.length){const c=document.createElement('p');c.className='note';c.textContent=lm==='alt'?'Kiswahili, Kikuyu, Kiswahili… ('+arr.length+' songs). Where no language is set, the app guesses it from the words; songs it can't tell are at the end.':'Showing '+arr.length+' of '+songs.length+' songs';box.append(c)}
+  if(songs.length){const c=document.createElement('p');c.className='note';c.textContent=lm==='alt'?'Kiswahili, Kikuyu, Kiswahili… ('+arr.length+' songs). Where no language is set, the app guesses it from the words; songs it cannot tell are at the end.':'Showing '+arr.length+' of '+songs.length+' songs';box.append(c)}
   if(!arr.length){const p=document.createElement('p');p.className='note';p.textContent=songs.length?(lm!=='all'?'No songs with this language yet. Edit a song and choose its language.':'No songs match your search.'):'No songs yet. Tap + Add to add the first one.';box.append(p);return}
   arr.forEach(s=>box.append(mk(s)));
 }
@@ -652,7 +652,7 @@ function stzAdd(text,after){
     }
     stzFit(t);stzNum();stzSync();
   };
-  t.onblur=function(){t.value=capWords(t.value);stzFit(t);stzSync()};
+  t.onblur=function(){if(t.value.split('\n').some(function(l){return BRK.test(l)||BRK2.test(l)})){t.value=cleanLyrics(t.value);t.oninput()}t.value=capWords(t.value);stzFit(t);stzSync()};
   x.onclick=function(){d.remove();if(!document.querySelector('#stz .stz'))stzAdd('');stzNum();stzSync()};
   stzFit(t);stzNum();
   return d;
