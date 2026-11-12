@@ -187,7 +187,7 @@ Second line here</div>
     <button id="xf" class="hide">✕ Exit full screen</button>
     <div id="pl" class="player hide">
       <div class="box" id="pb"></div>
-      <div class="row"><button class="g" id="sz">Enlarge</button><button class="g" id="fs">Full screen</button><span id="lkb" style="display:contents"></span><button class="g pvb">◀ Prev</button><button class="nxb">Next ▶</button></div>
+      <div class="row"><button class="g" id="sz">Enlarge</button><button class="g" id="fs">Full screen</button><span id="lkb" style="display:contents"></span><a id="yto" target="_blank" rel="noopener noreferrer" style="display:none;padding:4px 10px;font-size:12px;border-radius:8px;background:#c4302b;color:#fff;text-decoration:none;font-weight:700;align-items:center">▶ Open on YouTube</a><button class="g pvb">◀ Prev</button><button class="nxb">Next ▶</button></div>
     </div>
   </div>
 </main>
@@ -419,11 +419,15 @@ function playLink(i,auto){
     f.setAttribute('sandbox','allow-scripts allow-same-origin');
     f.referrerPolicy='strict-origin-when-cross-origin';
     f.allow='autoplay; encrypted-media';f.allowFullscreen=false;$('pb').append(f);
+    var yto=$('yto');if(yto){yto.href='https://www.youtube.com/watch?v='+id;yto.style.display='inline-flex'}
+    var ready=false;
+    setTimeout(function(){if(tok===playTok&&!ready)ytFallback(id)},7000); /* player never reported ready (e.g. embed blocked) */
     loadYT(function(failed){
       if(failed||tok!==playTok||!(window.YT&&YT.Player))return;
-      try{new YT.Player(f,{events:{onError:function(){if(tok===playTok)ytFallback(id)}}})}catch(e){}
+      try{new YT.Player(f,{events:{onReady:function(){ready=true},onStateChange:function(){ready=true},onError:function(){if(tok===playTok)ytFallback(id)}}})}catch(e){}
     });
   }
+  else{var y=$('yto');if(y)y.style.display='none'}
   paintLinks();
 }
 function navList(){return(cur&&order.some(x=>x.id===cur.id))?order:songs}
