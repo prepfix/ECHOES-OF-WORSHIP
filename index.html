@@ -135,10 +135,6 @@ body.viewing main{padding-bottom:calc(var(--pl-h,200px) + 16px)}
 .player.novid .row #hm2,.player.novid .row button.pvb,.player.novid .row button.nxb{flex:1 1 28%}
 
 /* one text box per stanza */
-#stz .stz{margin:0 0 10px}
-#stz .stz .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
-#stz .stz .n{font-size:12px;font-weight:700;color:var(--mu)}
-#stz textarea{width:100%;box-sizing:border-box;min-height:56px;resize:none;overflow:hidden;font-size:17px;line-height:1.6}
 .lgbar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}.lgbar button{padding:5px 11px;font-size:13px;border-radius:999px}
 #hmH{padding:5px 14px;font-size:14px;margin-right:6px}
 @media (max-width:699px){#hmH{display:none}}
@@ -158,13 +154,11 @@ body.viewing main{padding-bottom:calc(var(--pl-h,200px) + 16px)}
     <h2>Add song</h2>
     <p class="note">The song number is assigned automatically. Once saved, only the admin can change or remove it.</p>
     <label>Title</label><input id="ti" autocapitalize="words" maxlength="150" placeholder="Leave empty to fill from a video link">
-    <label>Language</label>
+    <label>Language <span class="note">(required)</span></label>
     <select id="lg"><option value="">Choose language…</option><option value="kiswahili">Kiswahili</option><option value="kikuyu">Kikuyu</option></select>
-    <div id="lgs" class="note"></div>
     <label>YouTube links</label><div id="lks"></div><button type="button" class="g" id="addlk" style="margin-top:2px">+ Add another link</button>
     <label>Lyrics</label>
-    <textarea id="ly" rows="20" autocapitalize="words" maxlength="15000" style="display:none"></textarea>
-    <div id="stz"></div><button type="button" class="g" id="addst" style="margin-top:2px">+ Add stanza</button> <button type="button" class="g" id="spl" style="margin-top:2px">✂ Split into stanzas</button>
+    <textarea id="ly" rows="16" autocapitalize="words" maxlength="15000" style="font-size:17px;line-height:1.6" placeholder="Paste or type the lyrics. Leave a blank line between verses and the chorus."></textarea>
     <div class="bar"><button id="save">Save</button><button class="g" id="cancel">Cancel</button></div>
   </div>
 
@@ -193,6 +187,9 @@ Second line here</div>
     <label>Upload a file</label><input type="file" id="bf" accept=".txt,.csv,.json,text/plain,text/csv,application/json">
     <label>Or paste your songs here</label>
     <textarea id="bt" rows="16" autocapitalize="words" maxlength="400000" placeholder="Song title&#10;Link: https://youtu.be/...&#10;Lyrics...&#10;===&#10;Next song title&#10;Lyrics..."></textarea>
+    <label>Language of these songs <span class="note">(required)</span></label>
+    <select id="blg"><option value="">Choose language…</option><option value="kiswahili">Kiswahili</option><option value="kikuyu">Kikuyu</option><option value="none">Not sure - I will set it later</option></select>
+    <p class="note">All songs in this import get this language. Importing a mix? Import each language separately, or pick "set it later" and categorize them afterwards.</p>
     <label>If a song's lyrics are already in the app</label>
     <select id="bdup">
       <option value="smart">Replace the old song if the new one has a video it lacks, otherwise skip</option>
@@ -220,12 +217,13 @@ Second line here</div>
     <div class="bar">
       <button class="g admin hide" id="edit">Edit</button><button class="d admin hide" id="del">Delete</button>
       <button class="g" id="fm">A−</button><button class="g" id="fp">A+</button><button class="g" id="shr">Share</button></div>
+    <div id="vlg" class="lgbar"></div>
     <h2 id="vt"></h2>
     <div id="vl" class="lyrics"></div>
     <button id="xf" class="hide">✕ Exit full screen</button>
     <div id="pl" class="player hide">
       <div class="box" id="pb"></div>
-      <div class="row"><button class="g" id="sz">Enlarge</button><button class="g" id="ap" type="button"></button><button class="g hm" id="hm2" type="button">🏠 Home</button><span id="lkb" style="display:contents"></span><div id="pst" class="s" style="width:100%;font-size:12px"></div><button class="g pvb">◀ Prev</button><button class="nxb">Next ▶</button></div>
+      <div class="row"><button class="g" id="sz">Enlarge</button><button class="g" id="ap" type="button"></button><button class="g hm" id="hm2" type="button">🏠 Home</button><span id="lkb" style="display:contents"></span><select id="plm" aria-label="Play order" style="flex:1 1 auto;width:auto;min-width:0;padding:3px 6px;font-size:12px;border-radius:7px"><option value="all">All songs</option><option value="sw">Kiswahili only</option><option value="ki">Kikuyu only</option><option value="alt">Kiswahili ⇄ Kikuyu</option></select><div id="pst" class="s" style="width:100%;font-size:12px"></div><button class="g pvb">◀ Prev</button><button class="nxb">Next ▶</button></div>
     </div>
   </div>
 </main>
@@ -374,13 +372,11 @@ const LGN={kiswahili:'Kiswahili',kikuyu:'Kikuyu'};
 let lm='alt',altRank=null; /* all | sw | ki | alt */
 try{lm=localStorage.getItem('langmode')||'alt'}catch(e){}
 function lgOf(s){return s&&(s.lang==='kikuyu'||s.lang==='kiswahili')?s.lang:''}
-/* the chosen language, or a guess from the words when none was chosen */
-const gc=new Map();
-function lgEff(s){const e=lgOf(s);if(e)return e;const k=s.id+'|'+(s.lyrics||'').length;if(!gc.has(k))gc.set(k,guessLang((s.title||'')+'\n'+(s.lyrics||'')));return gc.get(k)}
+/* Language is only what a person chose - the app never guesses it */
 /* Kiswahili, Kikuyu, Kiswahili, Kikuyu ... (a language that runs out leaves the rest of the other) */
 function altList(a){
   const rk=altRank,srt=l=>rk?l.sort((x,y)=>(rk[x.id]==null?1e9:rk[x.id])-(rk[y.id]==null?1e9:rk[y.id])):l;
-  const sw=srt(a.filter(s=>lgEff(s)==='kiswahili')),ki=srt(a.filter(s=>lgEff(s)==='kikuyu')),rest=a.filter(s=>!lgEff(s)),out=[];
+  const sw=srt(a.filter(s=>lgOf(s)==='kiswahili')),ki=srt(a.filter(s=>lgOf(s)==='kikuyu')),rest=a.filter(s=>!lgOf(s)),out=[];
   for(let i=0;i<Math.max(sw.length,ki.length);i++){if(sw[i])out.push(sw[i]);if(ki[i])out.push(ki[i])}
   return out.concat(rest); /* songs whose language can't be told go last */
 }
@@ -389,30 +385,13 @@ function shuffleAlt(){
   for(let i=ids.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]]}
   altRank={};ids.forEach((id,i)=>altRank[id]=i);render();
 }
-/* a hint only - the person always confirms the language */
-const KW_SW=new Set('mungu bwana yesu asante sifa utukufu nakupenda tunakusifu mimi wewe yeye kwa hakuna moyo upendo nguvu mwokozi baba roho mtakatifu aleluya ninakuabudu nitakusifu kwako wetu wangu wako yako tunakuabudu nakusifu unastahili milele mwenyezi'.split(' '));
-const KW_KI=new Set('ngai mwathani ngatho wega muthamaki mutheru mũtheru mũthamaki niwe nĩwe niguo nĩguo ũhoro ũndũ gũtirĩ tũ twĩ wĩ kĩrĩ ngũigana ngwatia ũkũ andũ athiaga ngũkũgeria'.split(' '));
-function guessLang(t){
-  const w=String(t||'').toLowerCase().split(/[^\p{L}]+/u).filter(Boolean);
-  if(w.length<6)return '';
-  let sw=0,ki=0;w.forEach(x=>{if(KW_SW.has(x))sw++;if(KW_KI.has(x))ki++});
-  ki+=Math.floor(((String(t).match(/[ĩũĨŨ]/g)||[]).length)/2);
-  if(Math.max(sw,ki)<3)return '';
-  return ki>=sw*1.5?'kikuyu':sw>=ki*1.5?'kiswahili':'';
-}
-function lgHint(){
-  const h=$('lgs');h.textContent='';if($('lg').value)return;
-  const g=guessLang($('ly').value);if(!g)return;
-  const b=document.createElement('button');b.type='button';b.className='g';b.style.cssText='padding:4px 10px;font-size:13px;margin-left:6px';
-  b.textContent='Use '+LGN[g];b.onclick=()=>{$('lg').value=g;lgHint()};
-  h.append('This looks like '+LGN[g]+'.',b);
-}
-$('lg').onchange=lgHint;
+
 
 function nz(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim()}
 const nzc=new Map();
 function nzSong(s){const k=s.id+'|'+(s.lyrics||'').length+'|'+(s.title||'').length;let r=nzc.get(k);if(!r){if(nzc.size>4000)nzc.clear();r=' '+nz((s.title||'')+' '+(s.lyrics||''))+' ';nzc.set(k,r)}return r}
 function render(){
+  syncPlm();if(cur&&!$('view').classList.contains('hide'))paintLg();
   const q=$('q').value.trim().toLowerCase();
   let mode='num';try{mode=localStorage.getItem('sortmode')==='az'?'az':'num'}catch(e){}
   const qn=nz(q),qw=qn.split(' ').filter(Boolean);
@@ -432,12 +411,15 @@ function render(){
     if(selMode)box.append(selTools(arr));
   }
   if(!q&&mode==='az')arr.sort((a,b)=>(a.title||'').localeCompare(b.title||'',undefined,{sensitivity:'base'}));
-  if(lm==='sw'||lm==='ki')arr=arr.filter(s=>lgEff(s)===(lm==='sw'?'kiswahili':'kikuyu'));
+  const unset=songs.filter(s=>!lgOf(s)).length;
+  if(lm==='none'&&!(isAdmin&&unset))lm='all';
+  if(lm==='none')arr=arr.filter(s=>!lgOf(s));
+  else if(lm==='sw'||lm==='ki')arr=arr.filter(s=>lgOf(s)===(lm==='sw'?'kiswahili':'kikuyu'));
   else if(lm==='alt')arr=altList(arr);
   order=arr.slice(); /* Prev/Next follow the list exactly as shown */
   if(songs.length){
     const lb=document.createElement('div');lb.className='lgbar';
-    [['all','All'],['sw','Kiswahili'],['ki','Kikuyu'],['alt','Kiswahili ⇄ Kikuyu']].forEach(([k,t])=>{
+    [['all','All'],['sw','Kiswahili'],['ki','Kikuyu'],['alt','Kiswahili ⇄ Kikuyu']].concat(isAdmin&&unset?[['none','Not set ('+unset+')']]:[]).forEach(([k,t])=>{
       const b=document.createElement('button');b.type='button';b.textContent=t;if(lm!==k)b.className='g';
       b.onclick=()=>{lm=k;try{localStorage.setItem('langmode',k)}catch(e){}window.scrollTo(0,0);render()};lb.append(b);
     });
@@ -450,7 +432,8 @@ function render(){
     const w=document.createElement('div'),t=document.createElement('div');
     w.className='w';t.className='t';t.textContent=capWords(s.title);w.append(t);
     if(qn&&!nz(s.title).includes(qn)){const ln=(s.lyrics||'').split('\n').find(x=>nz(x).includes(qn));if(ln){const g=document.createElement('div');g.className='s';g.style.cssText='overflow:hidden;text-overflow:ellipsis;white-space:nowrap';g.textContent='… '+ln.trim();w.append(g)}}
-    if(lgEff(s)){const g=document.createElement('div');g.className='s';g.textContent=LGN[lgEff(s)]+(lgOf(s)?'':' (guessed)');w.append(g)}
+    if(lgOf(s)){const g=document.createElement('div');g.className='s';g.textContent=LGN[lgOf(s)];w.append(g)}
+    else if(isAdmin){const g=document.createElement('div');g.className='s';g.textContent='Language not set';g.style.opacity='.6';w.append(g)}
     const p=document.createElement('button');p.type='button';p.className='pbtn';p.textContent='▶';
     if(getLinks(s).length){p.title='Play';p.setAttribute('aria-label','Play '+s.title);p.onclick=e=>{e.stopPropagation();show(s,true)}}
     else{p.disabled=true;p.style.visibility='hidden';p.setAttribute('aria-hidden','true');p.tabIndex=-1} /* no video: leave the space blank */
@@ -486,7 +469,7 @@ function render(){
     if(window.__fit)window.__fit();
     return;
   }
-  if(songs.length){const c=document.createElement('p');c.className='note';c.textContent=lm==='alt'?'Kiswahili, Kikuyu, Kiswahili… ('+arr.length+' songs). Where no language is set, the app guesses it from the words; songs it cannot tell are at the end.':'Showing '+arr.length+' of '+songs.length+' songs';box.append(c)}
+  if(songs.length){const c=document.createElement('p');c.className='note';c.textContent=lm==='alt'?'Kiswahili, Kikuyu, Kiswahili… ('+arr.length+' songs). Songs with no language set are at the end.':'Showing '+arr.length+' of '+songs.length+' songs';box.append(c)}
   if(!arr.length){const p=document.createElement('p');p.className='note';p.textContent=songs.length?(lm!=='all'?'No songs with this language yet. Edit a song and choose its language.':'No songs match your search.'):'No songs yet. Tap + Add to add the first one.';box.append(p);return}
   arr.forEach(s=>box.append(mk(s)));
 }
@@ -587,16 +570,17 @@ function playLink(i,auto){
   }else{if(yto)yto.style.display='none';var st=$('pst');if(st)st.textContent=''}
   paintLinks();
 }
-function navList(){return(cur&&order.some(x=>x.id===cur.id))?order:songs}
+function navList(){return order.length?order:songs}
+function syncPlm(){const e=$('plm');if(e)e.value=['all','sw','ki','alt'].includes(lm)?lm:'all'}
 function paintNav(){
   if(!cur)return;
   const L=navList(),i=L.findIndex(x=>x.id===cur.id);
   document.querySelectorAll('.pvb').forEach(b=>b.disabled=i<=0);
-  document.querySelectorAll('.nxb').forEach(b=>b.disabled=i<0||i>=L.length-1);
+  document.querySelectorAll('.nxb').forEach(b=>b.disabled=!L.length||i>=L.length-1);
 }
 function step(d){
   if(!cur)return;
-  const L=navList(),i=L.findIndex(x=>x.id===cur.id),n=L[i+d];
+  const L=navList(),i=L.findIndex(x=>x.id===cur.id),n=i<0?(d>0?L[0]:null):L[i+d]; /* not in this order (language just changed): Next starts it */
   if(n)show(n,true); /* opening via Next/Prev starts the video automatically */
 }
 /* every stanza / chorus (a blank line in the lyrics) gets its own box */
@@ -606,11 +590,33 @@ function paintLyrics(t){
   if(!ly){v.textContent='(no lyrics yet)';return}
   ly.split(/\n[ \t]*\n+/).forEach(function(p){var d=document.createElement('div');d.className='sb';d.textContent=p;v.append(d)});
 }
+let lgPick=null,lgSaved='';
+function paintLg(){
+  const b=$('vlg');if(!b||!cur)return;b.textContent='';
+  const l=lgOf(cur);
+  if(!isAdmin){if(l){const t=document.createElement('span');t.className='note';t.textContent=LGN[l];b.append(t)}return}
+  if(lgPick&&lgPick.id!==cur.id)lgPick=null;
+  if(lgSaved&&lgSaved!==cur.id)lgSaved='';
+  const v=lgPick?lgPick.val:l;
+  const t=document.createElement('span');t.className='note';t.textContent='Language:';
+  const sl=document.createElement('select');sl.style.cssText='width:auto;padding:5px 8px;font-size:14px';
+  [['','Not set'],['kiswahili','Kiswahili'],['kikuyu','Kikuyu']].forEach(o=>{const op=document.createElement('option');op.value=o[0];op.textContent=o[1];sl.append(op)});
+  sl.value=v;
+  sl.onchange=()=>{lgPick={id:cur.id,val:sl.value};lgSaved='';paintLg()};
+  const sv=document.createElement('button');sv.type='button';sv.textContent='Save';sv.disabled=!(v&&v!==l);
+  sv.onclick=async()=>{
+    if(!fdb||!v)return;sv.disabled=true;
+    try{await fdb.collection('songs').doc(cur.id).update({lang:v});cur={...cur,lang:v};lgPick=null;lgSaved=cur.id;paintLg()}
+    catch(e){sv.disabled=false;alert('Could not save the language: '+e.message)}
+  };
+  b.append(t,sl,sv);
+  if(lgSaved===cur.id){const k=document.createElement('span');k.className='note';k.textContent='Saved ✓';b.append(k)}
+}
 function show(s,auto){
   cur=s;$('vt').textContent='#'+s.number+'  '+capWords(s.title);
   paintLyrics(s.lyrics);$('vl').style.fontSize=fs+'px';
   setFull(false);playLink(0,auto);
-  panel('view');paintNav();
+  panel('view');paintLg();paintNav();
   try{history.replaceState({echoesView:1},'',location.pathname+location.search+'#song-'+s.number)}catch(e){}
 }
 function addLinkRow(v){
@@ -634,65 +640,20 @@ async function autoTitle(v){
   }
 }
 function formLinks(){return[...new Set([...$('lks').querySelectorAll('input')].flatMap(i=>splitLinks(i.value)))]}
-/* Each stanza has its own text box. They are joined with a blank line into the hidden lyrics field (#ly), which the rest of the app already uses. */
-function stzSync(){$('ly').value=[].map.call(document.querySelectorAll('#stz textarea'),function(t){return t.value.replace(/^\n+/,'').replace(/\s+$/,'')}).filter(function(v){return v.trim()}).join('\n\n');lgHint()}
-function stzFit(t){t.style.height='auto';t.style.height=(t.scrollHeight+2)+'px'}
-function stzNum(){[].forEach.call(document.querySelectorAll('#stz .stz'),function(d,i){d.querySelector('.n').textContent='Stanza '+(i+1)})}
-var SPL=/\n[ \t\r\u00a0\u200b\ufeff]*\n(?:[ \t\r\u00a0\u200b\ufeff]*\n)*/;
-/* a long pasted block with no blank lines is cut into stanzas of 4 lines */
-function stzChunk(t){
-  var v=t.value.replace(/\r/g,''),L=v.split('\n').map(function(x){return x.replace(/[\u00a0\u200b\ufeff]/g,' ').replace(/\s+$/,'')}).filter(function(x){return x.trim()});
-  if(L.length<8||SPL.test(v))return;
-  var o=[];for(var i=0;i<L.length;i+=4)o.push(L.slice(i,i+4).join('\n'));t.value=o.join('\n\n');
-}
-function stzAdd(text,after){
-  var d=document.createElement('div');d.className='stz';
-  var h=document.createElement('div');h.className='h';
-  var n=document.createElement('span');n.className='n';
-  var x=document.createElement('button');x.type='button';x.className='l';x.textContent='✕ Remove';
-  h.append(n,x);
-  var t=document.createElement('textarea');t.rows=2;t.value=text||'';t.autocapitalize='words';t.maxLength=15000;
-  d.append(h,t);
-  if(after)after.after(d);else $('stz').append(d);
-  var pf=false;t.onpaste=function(){pf=true};
-  t.oninput=function(){
-    if(pf){pf=false;t.value=cleanLyrics(t.value);stzChunk(t)}
-    if(SPL.test(t.value)){            /* a blank line (or a pasted song) starts new stanza boxes */
-      var parts=t.value.split(SPL),prev=d,last=t;
-      t.value=parts[0];
-      for(var k=1;k<parts.length;k++){var nd=stzAdd(parts[k],prev);prev=nd;last=nd.querySelector('textarea')}
-      last.focus();try{last.setSelectionRange(0,0)}catch(e){}
-    }
-    stzFit(t);stzNum();stzSync();
-  };
-  t.onblur=function(){if(t.value.split('\n').some(function(l){return BRK.test(l)||BRK2.test(l)})){t.value=cleanLyrics(t.value);t.oninput()}t.value=capWords(t.value);stzFit(t);stzSync()};
-  x.onclick=function(){d.remove();if(!document.querySelector('#stz .stz'))stzAdd('');stzNum();stzSync()};
-  stzFit(t);stzNum();
-  return d;
-}
-function stzBuild(){
-  $('stz').textContent='';
-  var text=$('ly').value.trim(),parts=text?text.split(SPL):[''];
-  parts.forEach(function(p){stzAdd(p)});
-  stzNum();
-}
-$('spl').onclick=function(){
-  var n=parseInt(prompt('How many lines in each stanza?','4'),10);if(!n||n<1)return;
-  var L=[].map.call(document.querySelectorAll('#stz textarea'),function(t){return t.value}).join('\n').split('\n').filter(function(x){return x.trim()}),o=[];
-  for(var i=0;i<L.length;i+=n)o.push(L.slice(i,i+n).join('\n'));
-  $('ly').value=o.join('\n\n');stzBuild();stzSync();
-};
-$('addst').onclick=function(){var d=stzAdd('');d.querySelector('textarea').focus()};
+/* Lyrics: one plain box. A blank line starts a new verse; pasted text is tidied. */
+$('ly').onpaste=function(){var t=this;setTimeout(function(){t.value=cleanLyrics(t.value)},0)};
+$('ly').onblur=function(){this.value=capWords(cleanLyrics(this.value))};
 function openForm(s){
   editing=s||null;document.querySelector('#form h2').textContent=s?'Edit song #'+s.number:'Add song';
   $('ti').value=s?capWords(s.title):'';$('ly').value=s?cleanLyrics(s.lyrics):'';
   $('lks').textContent='';rawLinks(s).forEach(addLinkRow);if(!$('lks').children.length)addLinkRow('');
-  $('lg').value=s?lgOf(s):'';panel('form');stzBuild();lgHint();
+  $('lg').value=s?lgOf(s):'';panel('form');
 }
 async function save(){
   if(!fdb){alert('Firebase is not set up yet');return}
   const title=capWords($('ti').value.trim()),lyrics=cleanLyrics($('ly').value),links=formLinks(),youtube=links[0]||'',lang=$('lg').value;
   if(!title){alert('Please enter a title');return}
+  if(!lang){alert('Please choose the language: Kiswahili or Kikuyu');$('lg').focus();return}
   const bad=links.find(l=>!ytId(l));
   if(bad){alert('This link is not recognised:\n'+bad);return}
   const dup=findSimilar(lyrics,editing&&editing.id);
@@ -852,7 +813,7 @@ $('shr').onclick=async()=>{
 
 /* ===== Bulk add (admin) ===== */
 let bulkItems=[];
-function openBulk(){bulkItems=[];$('bt').value='';$('bf').value='';$('bprog').textContent='';bulkPreview();panel('bulk')}
+function openBulk(){$('blg').value='';bulkItems=[];$('bt').value='';$('bf').value='';$('bprog').textContent='';bulkPreview();panel('bulk')}
 /* ===== WhatsApp paste: removes "[06/09, 10:51 pm] Name:" stamps, keeps links + title + lyrics ===== */
 const WA_STAMP=/^\[?\d{1,2}[\/.]\d{1,2}(?:[\/.]\d{2,4})?,?\s+\d{1,2}[:.]\d{2}(?::\d{2})?\s*(?:[apAP]\.?[mM]\.?)?\]?\s*(?:-\s*)?[^:\n]{1,80}:[ \t]?/;
 function stripLyricsWord(t){const r=t.replace(/\s*[\(\[\-\u2013:|]*\s*lyrics?\s*[\)\]]*\s*$/i,'').trim();return r||t}
@@ -990,28 +951,30 @@ $('bf').onchange=async e=>{
     bulkPreview();
   }catch(err){alert(err.message||'Could not read that file')}
 };
+function blang(){const v=$('blg').value;return v==='kiswahili'||v==='kikuyu'?v:''}
 async function addOne(it){
   const cref=fdb.doc('meta/counter'),sref=fdb.collection('songs').doc();let num;
   const title=capWords(it.title),lyrics=it.lyrics,links=[...new Set((it.links||[]).filter(ytId))],youtube=links[0]||'';
   await fdb.runTransaction(async tx=>{
     const c=await tx.get(cref);num=(c.exists?c.data().n:0)+1;
     tx.set(cref,{n:num});
-    tx.set(sref,{number:num,title,lyrics,youtube,links,added:Date.now()});
+    tx.set(sref,{number:num,title,lyrics,youtube,links,...(blang()?{lang:blang()}:{}),added:Date.now()});
   });
   return num;
 }
 async function replaceOne(it){
   const old=songs.find(x=>x.id===it.target.id)||it.target;
   const title=capWords(it.title),lyrics=it.lyrics||old.lyrics||'',links=mergeLinks((it.links||[]).filter(ytId),rawLinks(old));
-  await fdb.collection('songs').doc(old.id).update({title,lyrics,youtube:links[0]||'',links,updated:Date.now()});
+  await fdb.collection('songs').doc(old.id).update({title,lyrics,youtube:links[0]||'',links,updated:Date.now(),...(blang()?{lang:blang()}:{})});
   return old.number;
 }
 $('bgo').onclick=async()=>{
   if(!fdb){alert('Firebase is not set up yet');return}
   const todo=bulkItems.filter(i=>i.status==='ok'||i.status==='warn'||i.status==='rep');
   const nA=todo.filter(i=>i.status!=='rep').length,nR=todo.length-nA;
+  if(todo.length&&!$('blg').value){alert('Please choose the language of these songs first');$('blg').focus();return}
   if(!todo.length||!confirm([nA?'Add '+nA+' new song'+(nA===1?'':'s'):'',nR?'Replace '+nR+' old song'+(nR===1?'':'s')+' (they keep their numbers)':''].filter(Boolean).join('\n')+'\n\nGo ahead?'))return;
-  $('bgo').disabled=true;$('bcancel').disabled=true;$('bt').disabled=true;$('bf').disabled=true;$('bdup').disabled=true;
+  $('bgo').disabled=true;$('bcancel').disabled=true;$('bt').disabled=true;$('bf').disabled=true;$('bdup').disabled=true;$('blg').disabled=true;
   let done=0,added=0,replaced=0,first=0,last=0;const repNums=[];
   try{
     for(const it of todo){
@@ -1028,7 +991,7 @@ $('bgo').onclick=async()=>{
     alert('Stopped after '+done+' of '+todo.length+' songs.\n'+e.message+'\n\nThe songs already done are saved and have been removed from your list, so you can try again.');
     bulkItems=bulkItems.filter(i=>!(todo.indexOf(i)>=0&&todo.indexOf(i)<done));bulkPreview();
   }
-  $('bcancel').disabled=false;$('bt').disabled=false;$('bf').disabled=false;$('bdup').disabled=false;
+  $('bcancel').disabled=false;$('bt').disabled=false;$('bf').disabled=false;$('bdup').disabled=false;$('blg').disabled=false;
 };
 $('bcancel').onclick=()=>home();
 
@@ -1173,6 +1136,7 @@ $('adm').onclick=async()=>{
   try{await auth.signInWithEmailAndPassword(email,pw)}catch(e){alert('Sign-in failed')}
 };
 $('q').oninput=()=>{if($('list').classList.contains('hide'))home();else render()};
+$('plm').onchange=()=>{lm=$('plm').value;try{localStorage.setItem('langmode',lm)}catch(e){}render();paintNav()};
 $('add').onclick=()=>openForm();
 $('addlk').onclick=()=>addLinkRow('').focus();
 document.querySelectorAll('.pvb').forEach(b=>b.onclick=()=>step(-1));
