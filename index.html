@@ -159,7 +159,7 @@ var gone=false;function end(){if(gone)return;gone=true;sp.classList.add('out');s
 sp.addEventListener('click',end);document.addEventListener('keydown',end,{once:true});setTimeout(end,3200)})()</script>
 
 <header>
-  <h1><span style="text-transform:uppercase;font-weight:800">🎵 Echoes of Worship</span><span><button class="g" id="hmH" type="button" title="Home">🏠 Home</button> <button class="l" id="thm" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button><button class="l" id="adm">Admin</button></span></h1>
+  <h1><span style="text-transform:uppercase;font-weight:800">🎵 Echoes of Worship</span><span><button class="g" id="hmH" type="button" title="Home">🏠 Home</button> <button class="l" id="thm" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button></span></h1>
   <div class="row"><input id="q" type="search" placeholder="Search number, title or lyrics"><button id="add">+ Add</button></div>
 </header>
 <main>
@@ -168,7 +168,7 @@ sp.addEventListener('click',end);document.addEventListener('keydown',end,{once:t
 
   <div id="form" class="hide">
     <h2>Add song</h2>
-    <p class="note">The song number is assigned automatically. Once saved, only the admin can change or remove it.</p>
+    <p class="note">The song number is assigned automatically. Once saved, the number stays the same even if you edit the song.</p>
     <label>Title</label><input id="ti" autocapitalize="words" maxlength="150" placeholder="Leave empty to fill from a video link">
     <label>Language <span class="note">(required)</span></label>
     <select id="lg"><option value="">Choose language…</option><option value="kiswahili">Kiswahili</option><option value="kikuyu">Kikuyu</option></select>
@@ -231,7 +231,7 @@ Second line here</div>
 
   <div id="view" class="hide">
     <div class="bar">
-      <button class="g admin hide" id="edit">Edit</button><button class="d admin hide" id="del">Delete</button>
+      <button class="g" id="edit">Edit</button>
       <button class="g" id="fm">A−</button><button class="g" id="fp">A+</button><button class="g" id="shr">Share</button></div>
     <div id="vlg" class="lgbar"></div>
     <h2 id="vt"></h2>
@@ -275,7 +275,6 @@ Second line here</div>
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 /* ====== PASTE YOUR FIREBASE CONFIG HERE (see setup steps) ====== */
 const firebaseConfig = {
@@ -287,7 +286,7 @@ const firebaseConfig = {
 /* =============================================================== */
 
 const $=id=>document.getElementById(id);
-let hashDone=false,songs=[],order=[],linkIdx=0,cur=null,editing=null,fs=18,isAdmin=false,fdb,auth;
+let hashDone=false,songs=[],order=[],linkIdx=0,cur=null,editing=null,fs=18,isAdmin=true,fdb,auth;
 let selMode=false,selBusy=false,selBackup=true,selFrom='',selTo='';const sel=new Set(); /* admin bulk delete */
 
 let gotSnap=false;
@@ -296,7 +295,7 @@ listNote('Loading songs…');
 setTimeout(function(){if(!gotSnap)listNote('Songs are taking long to load. Check your internet connection. If this stays, the songs cannot be reached from this web address - tell the developer.')},10000);
 if(firebaseConfig.apiKey==="PASTE_HERE"){$('cfgwarn').classList.remove('hide')}
 else{
-  firebase.initializeApp(firebaseConfig);fdb=firebase.firestore();auth=firebase.auth();
+  firebase.initializeApp(firebaseConfig);fdb=firebase.firestore();
   fdb.collection('songs').orderBy('number').onSnapshot(s=>{
     gotSnap=true;songs=s.docs.map(d=>({id:d.id,...d.data()}));
     if(cur){cur=songs.find(x=>x.id===cur.id)||cur}
@@ -304,7 +303,6 @@ else{
     if(cur&&!$('view').classList.contains('hide'))paintNav();
     if(!hashDone&&songs.length)openFromHash();
   },e=>{gotSnap=true;listNote('Could not load songs: '+e.message);alert('Could not load songs: '+e.message)});
-  auth.onAuthStateChanged(u=>{isAdmin=!!u;if(!u){selMode=false;sel.clear()}$('adm').textContent=u?'Sign out':'Admin';document.querySelectorAll('.admin').forEach(b=>b.classList.toggle('hide',!u));render();selShow(!$('list').classList.contains('hide'))});
 }
 
 /* ===== Links (a song can have several) ===== */
@@ -418,7 +416,7 @@ function render(){
     const bb=document.createElement('button');bb.className='g';bb.textContent='⬆ Bulk add';bb.onclick=openBulk;bb.disabled=selMode;
     const db=document.createElement('button');db.className='d';db.textContent=selMode?'✕ Stop deleting':'🗑 Bulk delete';db.onclick=()=>setSelMode(!selMode);
     const lb=document.createElement('button');lb.className='g';lb.textContent='🔗 Add links';lb.onclick=openLinks;lb.disabled=selMode;
-    ab.append(bb,lb,db);box.append(ab);
+    ab.append(bb,lb);box.append(ab);
     if(selMode)box.append(selTools(arr));
   }
   if(!q&&mode==='az')arr.sort((a,b)=>(a.title||'').localeCompare(b.title||'',undefined,{sensitivity:'base'}));
@@ -1140,12 +1138,6 @@ $('lngo').onclick=async()=>{
 };
 $('lncancel').onclick=()=>home();
 
-$('adm').onclick=async()=>{
-  if(!auth){alert('Firebase is not set up yet');return}
-  if(isAdmin){auth.signOut();return}
-  const email=prompt('Admin email');if(!email)return;const pw=prompt('Admin password');if(!pw)return;
-  try{await auth.signInWithEmailAndPassword(email,pw)}catch(e){alert('Sign-in failed')}
-};
 $('q').oninput=()=>{if($('list').classList.contains('hide'))home();else render()};
 $('plm').onchange=()=>{lm=$('plm').value;try{localStorage.setItem('langmode',lm)}catch(e){}render();paintNav()};
 $('add').onclick=()=>openForm();
@@ -1164,7 +1156,7 @@ function goHome(){
 }
 $('hm2').onclick=goHome;$('hmH').onclick=goHome;
 $('edit').onclick=()=>openForm(cur);
-$('del').onclick=del;
+
 $('fp').onclick=()=>{fs=Math.min(40,fs+2);$('vl').style.fontSize=fs+'px'};
 $('fm').onclick=()=>{fs=Math.max(12,fs-2);$('vl').style.fontSize=fs+'px'};
 function setFull(on){
