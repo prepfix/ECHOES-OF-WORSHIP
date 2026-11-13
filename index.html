@@ -11,9 +11,9 @@
 <script>try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <script>addEventListener('error',function(e){try{if(document.getElementById('errb'))return;var d=document.createElement('div');d.id='errb';d.style.cssText='position:fixed;left:8px;right:8px;bottom:60px;z-index:99;background:#b3261e;color:#fff;padding:8px 12px;border-radius:10px;font-size:13px';d.textContent='Error: '+((e&&e.message)||'unknown')+'. Please send this message to the developer.';(document.body||document.documentElement).append(d)}catch(_){}})</script>
 <style>
-:root{--bg:#f6f4ef;--card:#fff;--tx:#1d1b18;--mu:#6d675e;--ac:#5b3fa8;--ac2:#fff;--acb:#5b3fa8;--dgb:#b3261e;--bd:#ddd6c8;--dg:#b3261e}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#15131a;--card:#201d29;--tx:#f0ecf7;--mu:#a49db3;--ac:#a98bff;--ac2:#15131a;--acb:#6a4cc4;--dgb:#b3261e;--bd:#38334a;--dg:#ff8a80;color-scheme:dark}}
-:root[data-theme=dark]{--bg:#15131a;--card:#201d29;--tx:#f0ecf7;--mu:#a49db3;--ac:#a98bff;--ac2:#15131a;--acb:#6a4cc4;--dgb:#b3261e;--bd:#38334a;--dg:#ff8a80;color-scheme:dark}
+:root{--bg:#f6f4ef;--card:#fff;--tx:#1d1b18;--mu:#6d675e;--ac:#5b3fa8;--ac2:#fff;--bd:#ddd6c8;--dg:#b3261e}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#15131a;--card:#201d29;--tx:#f0ecf7;--mu:#a49db3;--ac:#a98bff;--ac2:#15131a;--bd:#38334a;--dg:#ff8a80;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#15131a;--card:#201d29;--tx:#f0ecf7;--mu:#a49db3;--ac:#a98bff;--ac2:#15131a;--bd:#38334a;--dg:#ff8a80;color-scheme:dark}
 :root[data-theme=light]{color-scheme:light}
 *{box-sizing:border-box}
 html{scroll-padding-top:calc(var(--brand-h,80px) + 100px)}
@@ -25,7 +25,7 @@ input,textarea,select{width:100%;padding:10px 12px;border:1px solid var(--bd);bo
 textarea#ly{min-height:380px;font-size:17px;line-height:1.6}
 textarea#bt{min-height:300px}
 input#ti{padding:12px 14px;font-size:17px}
-button{border:0;border-radius:10px;padding:10px 14px;background:var(--acb) linear-gradient(135deg,var(--acb),color-mix(in srgb,var(--acb) 80%,#fff));color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button{border:0;border-radius:10px;padding:10px 14px;background:var(--ac);color:var(--ac2);font:inherit;font-weight:600;cursor:pointer}
 button.g{background:transparent;color:var(--ac);border:1px solid var(--bd)}
 button.d{background:transparent;color:var(--dg);border:1px solid var(--bd)}
 button.l{background:none;border:0;color:var(--mu);font-weight:400;font-size:13px;padding:2px 6px}
@@ -34,7 +34,7 @@ main{padding:12px;max-width:760px;margin:0 auto}
 .song .w{flex:1;min-width:0}
 .song .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;line-height:1.3}
 .song .pbtn{flex:none;margin-left:auto;padding:3px 12px;font-size:14px;line-height:1.3;border-radius:999px}
-.num{min-width:40px;text-align:center;font-weight:700;font-size:13px;color:#fff;background:var(--acb);border-radius:8px;padding:2px 6px;flex:none}
+.num{min-width:40px;text-align:center;font-weight:700;font-size:14px;color:var(--ac)}
 .t{font-weight:600}.s{color:var(--mu);font-size:13px}
 .lyrics{white-space:pre-wrap;line-height:1.7;padding-bottom:260px}
 .player{position:fixed;left:0;right:0;bottom:calc(var(--foot-h,40px) - 1px);background:var(--card);border-top:1px solid var(--bd);padding:8px 12px;z-index:6;display:flex;gap:10px;align-items:center}
@@ -55,9 +55,10 @@ iframe{width:100%;height:100%;border:0}
 .brand img{flex:none}
 .brand img{height:34px;display:inline-block;vertical-align:middle;max-width:55%;object-fit:contain;background:#fff;border-radius:14px;padding:4px 10px;animation:logoGlow 2.8s ease-in-out infinite}
 @keyframes logoGlow{0%,100%{box-shadow:0 0 6px 1px rgba(0,153,255,.45),0 0 16px 3px rgba(0,153,255,.25)}50%{box-shadow:0 0 14px 4px rgba(0,153,255,.85),0 0 32px 10px rgba(255,160,30,.45)}}
-footer{position:fixed;left:0;right:0;bottom:0;z-index:5;background:#800020;border-top:1px solid #a3243f;text-align:center;color:#8fd0ff;font-size:11px;letter-spacing:.1em;font-weight:700;padding:5px 12px calc(5px + env(safe-area-inset-bottom,0px));text-shadow:0 0 6px rgba(30,144,255,.55);animation:footGlow 2.8s ease-in-out infinite}
-footer .fw{color:#fff}
-@keyframes footGlow{0%,100%{text-shadow:0 0 4px rgba(30,144,255,.4)}50%{text-shadow:0 0 8px #4db3ff,0 0 18px rgba(30,144,255,.8)}}
+footer{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--bd);text-align:center;color:#8fd0ff;font-size:11px;letter-spacing:.1em;font-weight:700;padding:5px 12px calc(5px + env(safe-area-inset-bottom,0px));text-shadow:0 0 6px #1e90ff,0 0 14px #1e90ff,0 0 26px #0a6cff;animation:footGlow 2.8s ease-in-out infinite}
+@keyframes footGlow{0%,100%{text-shadow:0 0 4px #1e90ff,0 0 10px #1e90ff}50%{text-shadow:0 0 8px #4db3ff,0 0 20px #1e90ff,0 0 36px #0a6cff}}
+@media (prefers-color-scheme:light){:root:not([data-theme=dark]) footer{color:#0a5fd0}}
+:root[data-theme=light] footer{color:#0a5fd0}
 #thm{padding:2px 8px;font-size:16px}
 @media (prefers-reduced-motion:reduce){.brand img,footer{animation:none}}
 body.viewing main{padding-bottom:calc(var(--pl-h,200px) + 16px)}
@@ -80,7 +81,7 @@ details summary{cursor:pointer;color:var(--ac);font-weight:600;margin:6px 0}
 .bpv .it.rep .m{color:var(--ac);font-weight:600}.bpv .it.skip{opacity:.55}.bpv .it.warn .m{color:var(--dg)}
 .bpv .sum{font-weight:600;margin-bottom:8px}
 button:disabled{opacity:.45;cursor:not-allowed}
-button.dz{background:var(--dgb);color:#fff}
+button.dz{background:var(--dg);color:var(--ac2)}
 .adminbar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}.adminbar button{flex:1;padding:8px 6px;font-size:14px;white-space:nowrap}
 textarea#lnt{min-height:160px}
 .lit{padding:8px 10px;border:1px solid var(--bd);border-radius:10px;background:var(--card);margin-bottom:6px;font-size:14px}
@@ -162,7 +163,7 @@ sp.addEventListener('click',end);document.addEventListener('keydown',end,{once:t
   <div class="row"><input id="q" type="search" placeholder="Search number, title or lyrics"><button id="add">+ Add</button></div>
 </header>
 <main>
-  <p id="cfgwarn" class="note hide">The database is not connected yet. Put the Supabase URL and key at the top of the script.</p>
+  <p id="cfgwarn" class="note hide">Firebase is not set up yet. Fill in the config at the top of the script (see setup steps).</p>
   <div id="list"></div>
 
   <div id="form" class="hide">
@@ -243,7 +244,7 @@ Second line here</div>
   </div>
 </main>
 <div id="selbar" class="selbar hide"><span id="selc">0 selected</span><button class="dz" id="seldel" disabled>🗑 Delete</button><button class="g" id="seldone">Done</button></div>
-<footer><span class="fw">DEVELOPED BY</span> CYRUS IRERI <span class="fw">0720872582</span></footer>
+<footer>DEVELOPED BY CYRUS IRERI 0720872582</footer>
 
 <script>
 (function(){
@@ -272,107 +273,29 @@ Second line here</div>
   var im=document.querySelector('.brand img');if(im)im.addEventListener('load',fit);
 })();
 </script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-/* ===== Shared database: Supabase (free). A small layer that gives the app the same calls it used before. ===== */
-function makeDb(cfg){
-  var base=cfg.url.replace(/\/+$/,'')+'/rest/v1/',H={'apikey':cfg.key,'Content-Type':'application/json'},L=[];
-  if(/^eyJ/.test(cfg.key))H.Authorization='Bearer '+cfg.key;
-  function enc(x){return encodeURIComponent(x)}
-  function newId(){return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,10)}
-  async function api(path,o){
-    o=o||{};
-    var r=await fetch(base+path,{method:o.method||'GET',headers:Object.assign({},H,o.headers||{}),body:o.body});
-    if(!r.ok){
-      var m='';try{var j=await r.json();m=j.message||j.hint||''}catch(e){}
-      throw new Error((m||'Database error '+r.status)+(r.status===401||r.status===403?' (permission)':''));
-    }
-    return r;
-  }
-  async function sigOf(col){
-    var r=await api('docs?collection=eq.'+enc(col)+'&select=updated_at&order=updated_at.desc&limit=1',{headers:{Prefer:'count=exact'}});
-    var rows=await r.json(),cr=r.headers.get('Content-Range')||'';
-    return cr.split('/')[1]+'|'+(rows[0]?rows[0].updated_at:'');
-  }
-  async function fetchAll(col){
-    var out=[],PG=1000,off=0;
-    for(;;){
-      var r=await api('docs?collection=eq.'+enc(col)+'&select=id,data&order=id&limit='+PG+'&offset='+off),rows=await r.json();
-      out=out.concat(rows);if(rows.length<PG)break;off+=PG;
-    }
-    return out;
-  }
-  function sortRows(rows,f,dir){
-    rows.sort(function(a,b){
-      var x=a.data[f],y=b.data[f];
-      if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;
-      return(x<y?-1:x>y?1:0)*(dir==='desc'?-1:1);
-    });
-  }
-  async function refresh(l,force){
-    if(l.busy){l.again=true;return}
-    l.busy=true;
-    try{
-      var sig=await sigOf(l.col);
-      if(force||sig!==l.sig){
-        var rows=await fetchAll(l.col);sortRows(rows,l.order,l.dir);
-        l.sig=sig;l.errShown=false;
-        l.cb({docs:rows.map(function(r){return{id:r.id,data:function(){return r.data}}})});
-      }
-    }catch(e){if(l.err&&!l.errShown){l.errShown=true;l.err(e)}}
-    l.busy=false;
-    if(l.again){l.again=false;refresh(l,true)}
-  }
-  function touch(col){L.forEach(function(l){if(l.col===col)refresh(l,true)})}
-  async function upsert(rows){
-    await api('docs?on_conflict=collection,id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(rows)});
-  }
-  function ref(col,id){
-    return{id:id,col:col,
-      update:async function(d){await api('rpc/pw_merge',{method:'POST',body:JSON.stringify({c:col,i:id,d:d})});touch(col)},
-      set:async function(d){await upsert([{collection:col,id:id,data:d}]);touch(col)},
-      get:async function(){var rr=await api('docs?collection=eq.'+enc(col)+'&id=eq.'+enc(id)+'&select=data'),rows=await rr.json();return{exists:rows.length>0,data:function(){return rows[0]&&rows[0].data}}},
-      delete:async function(){await api('docs?collection=eq.'+enc(col)+'&id=eq.'+enc(id),{method:'DELETE'});touch(col)}};
-  }
-  setInterval(function(){if(document.visibilityState==='visible')L.forEach(function(l){refresh(l)})},15000);
-  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')L.forEach(function(l){refresh(l)})});
-  return{
-    collection:function(name){return{
-      doc:function(id){return ref(name,id||newId())},
-      add:async function(d){var id=newId();await upsert([{collection:name,id:id,data:d}]);touch(name);return{id:id}},
-      orderBy:function(f,dir){return{onSnapshot:function(cb,err){var l={col:name,order:f,dir:dir||'asc',cb:cb,err:err};L.push(l);refresh(l);return function(){L.splice(L.indexOf(l),1)}}}}
-    }},
-    doc:function(path){var p=path.split('/');return ref(p[0],p[1])},
-    runTransaction:async function(fn){
-      var writes=[];
-      var tx={
-        get:async function(r){var rr=await api('docs?collection=eq.'+enc(r.col)+'&id=eq.'+enc(r.id)+'&select=data'),rows=await rr.json();return{exists:rows.length>0,data:function(){return rows[0]&&rows[0].data}}},
-        set:function(r,d){writes.push({collection:r.col,id:r.id,data:d})}
-      };
-      await fn(tx);
-      if(writes.length){await upsert(writes);var c={};writes.forEach(function(w){c[w.collection]=1});Object.keys(c).forEach(touch)}
-    }
-  };
-}
-</script>
-<script>
-/* ====== SUPABASE DETAILS (Project URL and the publishable / anon key) ====== */
-const SUPA = {
-  url: "https://mmbhcdgpowfibbawmoos.supabase.co",
-  key: "sb_publishable_kwQ8F30iiDDwcXYYqUHYmg_dGsdoHI5"
+/* ====== PASTE YOUR FIREBASE CONFIG HERE (see setup steps) ====== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBEaFNHlmBTfKWGnSdAFWPqMSO-WGoEr2E",
+  authDomain: "echoes-of-worship.firebaseapp.com",
+  projectId: "echoes-of-worship",
+  appId: "1:11407208362:web:b1332c7a7a3903e63c45d3"
 };
 /* =============================================================== */
 
 const $=id=>document.getElementById(id);
-let hashDone=false,songs=[],order=[],linkIdx=0,cur=null,editing=null,fs=18,isAdmin=true,fdb;
+let hashDone=false,songs=[],order=[],linkIdx=0,cur=null,editing=null,fs=18,isAdmin=true,fdb,auth;
 let selMode=false,selBusy=false,selBackup=true,selFrom='',selTo='';const sel=new Set(); /* admin bulk delete */
 
 let gotSnap=false;
 function listNote(t){const p=document.createElement('p');p.className='note';p.textContent=t;$('list').textContent='';$('list').append(p)}
 listNote('Loading songs…');
 setTimeout(function(){if(!gotSnap)listNote('Songs are taking long to load. Check your internet connection. If this stays, the songs cannot be reached from this web address - tell the developer.')},10000);
-if(SUPA.url.indexOf("PASTE")===0){$('cfgwarn').classList.remove('hide')}
+if(firebaseConfig.apiKey==="PASTE_HERE"){$('cfgwarn').classList.remove('hide')}
 else{
-  fdb=makeDb(SUPA);
+  firebase.initializeApp(firebaseConfig);fdb=firebase.firestore();
   fdb.collection('songs').orderBy('number').onSnapshot(s=>{
     gotSnap=true;songs=s.docs.map(d=>({id:d.id,...d.data()}));
     if(cur){cur=songs.find(x=>x.id===cur.id)||cur}
@@ -736,7 +659,7 @@ function openForm(s){
   $('lg').value=s?lgOf(s):'';panel('form');
 }
 async function save(){
-  if(!fdb){alert('The database is not connected yet');return}
+  if(!fdb){alert('Firebase is not set up yet');return}
   const title=capWords($('ti').value.trim()),lyrics=cleanLyrics($('ly').value),links=formLinks(),youtube=links[0]||'',lang=$('lg').value;
   if(!title){alert('Please enter a title');return}
   if(!lang){alert('Please choose the language: Kiswahili or Kikuyu');$('lg').focus();return}
@@ -851,7 +774,7 @@ async function bulkDel(){
   selBusy=true;updSel();
   const gone=new Set();let err=null;
   try{
-    for(let i=0;i<n;i+=400){ /* up to 400 changes per batch */
+    for(let i=0;i<n;i+=400){ /* Firestore allows up to 500 changes per batch */
       const part=list.slice(i,i+400),b=fdb.batch();
       part.forEach(s=>b.delete(fdb.collection('songs').doc(s.id)));
       $('selc').textContent='Deleting '+Math.min(i+part.length,n)+' of '+n+'…';
@@ -1055,7 +978,7 @@ async function replaceOne(it){
   return old.number;
 }
 $('bgo').onclick=async()=>{
-  if(!fdb){alert('The database is not connected yet');return}
+  if(!fdb){alert('Firebase is not set up yet');return}
   const todo=bulkItems.filter(i=>i.status==='ok'||i.status==='warn'||i.status==='rep');
   const nA=todo.filter(i=>i.status!=='rep').length,nR=todo.length-nA;
   if(todo.length&&!$('blg').value){alert('Please choose the language of these songs first');$('blg').focus();return}
@@ -1187,7 +1110,7 @@ function lnPreview(){
 }
 $('lnt').oninput=()=>{clearTimeout(lnTimer);lnTimer=setTimeout(lnParse,500)};
 $('lngo').onclick=async()=>{
-  if(!fdb){alert('The database is not connected yet');return}
+  if(!fdb){alert('Firebase is not set up yet');return}
   lnItems.forEach(lnEval);
   const go=lnItems.filter(i=>i.status==='ok'||i.status==='amb');if(!go.length)return;
   const by=new Map();go.forEach(i=>{if(!by.has(i.target.id))by.set(i.target.id,[]);by.get(i.target.id).push(i)});
